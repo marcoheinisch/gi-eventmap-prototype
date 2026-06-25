@@ -417,7 +417,7 @@
     function clusterPoints(points) {
       const rect = mapSvg.getBoundingClientRect();
       const scale = rect.width ? rect.width / 1000 : 1;
-      const threshold = 28 / scale;
+      const threshold = 14 / scale;
       const clusters = [];
 
       for (const point of points) {
