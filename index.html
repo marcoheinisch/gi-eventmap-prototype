@@ -1,0 +1,600 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GI Event Map</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --navy: #1B2744;
+      --yellow: #F5C400;
+      --border: #E2E2DC;
+      --muted: #888;
+      --state: #EAEAE4;
+      --white: #fff;
+      font-family: "Source Sans 3", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--navy);
+      background: var(--white);
+    }
+
+    * { box-sizing: border-box; }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      background: var(--white);
+    }
+
+    body {
+      font-family: "Source Sans 3", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 16px;
+      line-height: 1.4;
+    }
+
+    a { color: inherit; }
+
+    .widget {
+      width: 100%;
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 28px 24px;
+      background: var(--white);
+      overflow-x: auto;
+    }
+
+    .columns {
+      display: grid;
+      grid-template-columns: minmax(250px, 0.78fr) minmax(380px, 1.62fr);
+      gap: 44px;
+      align-items: start;
+      min-width: 680px;
+    }
+
+    .section-label {
+      margin: 0 0 16px;
+      color: var(--navy);
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+    }
+
+    .map-shell {
+      position: relative;
+      width: min(100%, 360px);
+      background: var(--white);
+    }
+
+    .map-svg {
+      display: block;
+      width: 100%;
+      height: auto;
+      aspect-ratio: 1 / 1;
+      background: var(--white);
+      overflow: visible;
+    }
+
+    .states path {
+      fill: var(--state);
+      stroke: #fff;
+      stroke-width: 2;
+      vector-effect: non-scaling-stroke;
+    }
+
+    .marker-group {
+      cursor: pointer;
+      outline: none;
+    }
+
+    .marker-ring {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .marker-group:focus .marker-ring,
+    .marker-group:focus-within .marker-ring {
+      opacity: 1;
+    }
+
+    .empty-state,
+    .status {
+      color: var(--muted);
+      font-weight: 400;
+    }
+
+    .event-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      background: var(--white);
+    }
+
+    .event-list-shell {
+      overflow: hidden;
+    }
+
+    .event-item {
+      padding: 0 0 16px;
+      margin: 0 0 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .event-title {
+      display: inline;
+      color: var(--navy);
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    .event-title:hover,
+    .event-title:focus-visible {
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    .event-date {
+      margin-top: 4px;
+      color: var(--muted);
+      font-weight: 400;
+    }
+
+    .all-events-link {
+      display: inline-block;
+      margin-top: 0;
+      color: var(--muted);
+      font-weight: 400;
+      text-decoration: none;
+    }
+
+    .all-events-link:hover,
+    .all-events-link:focus-visible {
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    .event-card {
+      position: fixed;
+      z-index: 10;
+      width: min(280px, calc(100vw - 48px));
+      padding: 14px 16px 15px;
+      border: 1px solid var(--border);
+      background: var(--white);
+      box-shadow: 0 12px 34px rgba(27, 39, 68, 0.14);
+      color: var(--navy);
+    }
+
+    .event-card h3 {
+      margin: 0 0 6px;
+      font-size: 17px;
+      line-height: 1.25;
+      font-weight: 700;
+    }
+
+    .event-card .card-date,
+    .event-card .card-location {
+      margin: 0 0 4px;
+      color: var(--muted);
+      font-weight: 400;
+    }
+
+    .event-card a {
+      display: inline-block;
+      margin-top: 8px;
+      color: var(--navy);
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    .event-card a:hover,
+    .event-card a:focus-visible { text-decoration: underline; }
+
+    .event-card:hover { display: block; }
+
+    .event-card .card-event + .card-event {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+  <main class="widget" aria-label="GI Veranstaltungen">
+    <div class="columns">
+      <section aria-labelledby="local-events-label">
+        <h2 class="section-label" id="local-events-label">Vor Ort</h2>
+        <div class="map-shell" id="mapShell">
+          <svg class="map-svg" id="mapSvg" viewBox="0 0 1000 1000" role="img" aria-label="Deutschlandkarte mit GI-Veranstaltungen" xmlns="http://www.w3.org/2000/svg">
+            <g class="states" aria-hidden="true">
+        <path id="DESH" data-name="Schleswig-Holstein" d="M461.4,259.2 L542.8,171.6 L543.4,137.1 L471.4,108 L470.1,59.5 L424.5,78.7 L370.7,62.1 L373.9,133.1 L390.2,179.5 L341.9,240 L328.6,213 L269.1,219.7 L260.5,235.6 L461.4,259.2 Z"><title>Schleswig-Holstein</title></path>
+        <path id="DEMV" data-name="Mecklenburg-Vorpommern" d="M461.4,259.2 L540.2,321.8 L618.7,315.2 L761.4,202.8 L735.6,172.8 L655.2,123.8 L615.1,157.8 L542.6,181 L542.8,171.6 L461.4,259.2 Z"><title>Mecklenburg-Vorpommern</title></path>
+        <path id="DEHH" data-name="Hamburg" d="M463.3,237.1 a12,12 0 1,0 24,0 a12,12 0 1,0 -24,0 Z"><title>Hamburg</title></path>
+        <path id="DEHB" data-name="Bremen" d="M380.3,294.3 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0 Z"><title>Bremen</title></path>
+        <path id="DENI" data-name="Niedersachsen" d="M510.3,455.5 L540.2,321.8 L461.4,259.2 L260.5,235.6 L255.2,245.5 L268.5,286.5 L264.7,310.1 L389.3,505.5 L408.8,513.3 L510.3,455.5 Z"><title>Niedersachsen</title></path>
+        <path id="DEBB" data-name="Brandenburg" d="M618.7,315.2 L667.2,470.7 L807.4,427.8 L809.6,412.3 L791.9,348.9 L766.1,306.1 L785.9,273.9 L769.3,212 L761.4,202.8 L618.7,315.2 Z"><title>Brandenburg</title></path>
+        <path id="DEBE" data-name="Berlin" d="M705.3,361.4 a13,13 0 1,0 26,0 a13,13 0 1,0 -26,0 Z"><title>Berlin</title></path>
+        <path id="DEST" data-name="Sachsen-Anhalt" d="M644,498.6 L667.2,470.7 L618.7,315.2 L540.2,321.8 L510.3,455.5 L644,498.6 Z"><title>Sachsen-Anhalt</title></path>
+        <path id="DENW" data-name="Nordrhein-Westfalen" d="M237.6,626.7 L389.3,505.5 L264.7,310.1 L250.7,395.9 L232.7,440.3 L189.9,440.3 L201.8,561.8 L194.7,629.7 L237.6,626.7 Z"><title>Nordrhein-Westfalen</title></path>
+        <path id="DEHE" data-name="Hessen" d="M408.8,513.3 L389.3,505.5 L237.6,626.7 L265.9,653.4 L475.5,642.3 L408.8,513.3 Z"><title>Hessen</title></path>
+        <path id="DETH" data-name="Thüringen" d="M475.5,642.3 L490.8,669.2 L552.7,702 L651.5,689.9 L651,676.8 L647.8,656.6 L635.3,623.1 L648.7,616.7 L644,498.6 L510.3,455.5 L408.8,513.3 L475.5,642.3 Z"><title>Thüringen</title></path>
+        <path id="DESN" data-name="Sachsen" d="M644,498.6 L648.7,616.7 L687.1,598.3 L713.6,569.9 L764.7,547.7 L782.6,525.8 L801.4,539 L833.2,527 L804,452.8 L807.4,427.8 L667.2,470.7 L644,498.6 Z M653.2,690.8 L651,676.8 L651.5,689.9 L653.2,690.8 Z"><title>Sachsen</title></path>
+        <path id="DERP" data-name="Rheinland-Pfalz" d="M347.5,739.7 L490.8,669.2 L475.5,642.3 L265.9,653.4 L347.5,739.7 Z"><title>Rheinland-Pfalz</title></path>
+        <path id="DESL" data-name="Saarland" d="M265.9,653.4 L237.6,626.7 L194.7,629.7 L193.7,638.7 L208,664.2 L203.9,713.3 L237.6,742.4 L339.9,762.7 L347.5,739.7 L265.9,653.4 Z M304.2,837.9 L298.2,889.6 L339.2,765 L304.2,837.9 Z"><title>Saarland</title></path>
+        <path id="DEBW" data-name="Baden-Württemberg" d="M552.7,702 L490.8,669.2 L347.5,739.7 L339.9,762.7 L340.3,762.7 L339.2,765 L298.2,889.6 L295.2,915 L355.8,915.7 L370.4,892.3 L446.8,925.2 L463.3,920.7 L552.7,702 Z"><title>Baden-Württemberg</title></path>
+        <path id="DEBY" data-name="Bayern" d="M651.5,689.9 L552.7,702 L463.3,920.7 L468.3,919.3 L504.4,949 L514.5,920.8 L577.3,925.4 L628.3,906.1 L662.5,909.4 L684.7,931.4 L691.3,913.1 L681.2,842.6 L706.8,828.8 L731.9,778.3 L691.7,730.7 L655.3,703.9 L653.2,690.8 L651.5,689.9 Z"><title>Bayern</title></path>
+            </g>
+            <g id="markerLayer" aria-label="Veranstaltungsorte"></g>
+          </svg>
+        </div>
+        <p class="status" id="mapStatus">Lade Veranstaltungen …</p>
+      </section>
+
+      <section aria-labelledby="remote-events-label">
+        <h2 class="section-label" id="remote-events-label">Online &amp; International</h2>
+        <div class="event-list-shell" id="eventListShell">
+          <ul class="event-list" id="eventList" aria-live="polite"></ul>
+        </div>
+        <a class="all-events-link" href="#" aria-label="Alle Veranstaltungen anzeigen">Siehe alle Veranstaltungen</a>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const EVENTS_URL = 'events.json';
+    const NAVY = '#1B2744';
+    const YELLOW = '#F5C400';
+    const WHITE = '#fff';
+    const SVG_NS = 'http://www.w3.org/2000/svg';
+
+    const markerLayer = document.getElementById('markerLayer');
+    const eventList = document.getElementById('eventList');
+    const eventListShell = document.getElementById('eventListShell');
+    const mapShell = document.getElementById('mapShell');
+    const mapSvg = document.getElementById('mapSvg');
+    const mapStatus = document.getElementById('mapStatus');
+
+    let selectedMarker = null;
+    let openCard = null;
+    let closeCardTimer = null;
+    let allEvents = [];
+
+    function project(lat, lng) {
+      const x = lng * 71.26 - 236.9;
+      const mercY = Math.log(Math.tan(Math.PI / 4 + lat * Math.PI / 360));
+      const y = mercY * (-4150.5) + 4848;
+      return { x, y };
+    }
+
+    function formatDateRange(event) {
+      const start = parseIsoDate(event.dateStart);
+      const end = parseIsoDate(event.dateEnd);
+      if (!start) return '';
+      const fmt = new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+      if (!end || event.dateEnd === event.dateStart) return fmt.format(start);
+      return `${fmt.format(start)} – ${fmt.format(end)}`;
+    }
+
+    function parseIsoDate(value) {
+      if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+      const [year, month, day] = value.split('-').map(Number);
+      return new Date(year, month - 1, day);
+    }
+
+    function isGermanPhysical(event) {
+      return !event.online && Number.isFinite(event.lat) && Number.isFinite(event.lng);
+    }
+
+    function isRemoteOrInternational(event) {
+      return event.online || !isGermanPhysical(event);
+    }
+
+    function escapeText(value) {
+      return String(value ?? '');
+    }
+
+    function clearNode(node) {
+      while (node.firstChild) node.removeChild(node.firstChild);
+    }
+
+    async function loadEvents() {
+      try {
+        const response = await fetch(EVENTS_URL, { cache: 'no-store' });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        allEvents = Array.isArray(data) ? data : [];
+      } catch (error) {
+        allEvents = [];
+        mapStatus.textContent = 'events.json konnte nicht geladen werden.';
+        renderList([]);
+        return;
+      }
+
+      renderMap(allEvents.filter(isGermanPhysical));
+      renderList(allEvents.filter(isRemoteOrInternational));
+      syncListHeight();
+    }
+
+    function renderList(events) {
+      clearNode(eventList);
+      const sorted = [...events].sort(compareEvents);
+
+      if (sorted.length === 0) {
+        const li = document.createElement('li');
+        li.className = 'empty-state';
+        li.textContent = 'Keine Online- oder internationalen Veranstaltungen gefunden.';
+        eventList.appendChild(li);
+        return;
+      }
+
+      for (const event of sorted) {
+        const item = document.createElement('li');
+        item.className = 'event-item';
+
+        const link = document.createElement('a');
+        link.className = 'event-title';
+        link.href = event.url;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.textContent = escapeText(event.title);
+
+        const date = document.createElement('div');
+        date.className = 'event-date';
+        date.textContent = formatDateRange(event);
+
+        item.append(link, date);
+        eventList.appendChild(item);
+      }
+
+      syncListHeight();
+    }
+
+    function syncListHeight() {
+      const mapHeight = mapShell.offsetHeight;
+      const items = Array.from(eventList.children);
+      let visibleHeight = 0;
+
+      for (const item of items) {
+        const marginBottom = parseFloat(window.getComputedStyle(item).marginBottom) || 0;
+        const itemBottom = item.offsetTop + item.offsetHeight + marginBottom;
+        if (itemBottom > mapHeight) break;
+        visibleHeight = itemBottom;
+      }
+
+      eventListShell.style.maxHeight = `${visibleHeight || mapHeight}px`;
+    }
+
+    function renderMap(events) {
+      clearNode(markerLayer);
+      closeCard();
+      selectedMarker = null;
+
+      if (events.length === 0) {
+        mapStatus.textContent = 'Keine Vor-Ort-Veranstaltungen in Deutschland gefunden.';
+        return;
+      }
+
+      const points = events.map((event) => ({ ...project(event.lat, event.lng), events: [event] }));
+      const clusters = clusterPoints(points);
+      for (const cluster of clusters) drawMarker(cluster);
+      mapStatus.textContent = '';
+    }
+
+    function compareEvents(a, b) {
+      const ad = a.dateStart || '';
+      const bd = b.dateStart || '';
+      if (ad !== bd) return ad.localeCompare(bd);
+      return String(a.title || '').localeCompare(String(b.title || ''), 'de');
+    }
+
+    function clusterPoints(points) {
+      const rect = mapSvg.getBoundingClientRect();
+      const scale = rect.width ? rect.width / 1000 : 1;
+      const threshold = 28 / scale;
+      const clusters = [];
+
+      for (const point of points) {
+        let matched = null;
+        for (const cluster of clusters) {
+          const dx = point.x - cluster.x;
+          const dy = point.y - cluster.y;
+          if (Math.sqrt(dx * dx + dy * dy) <= threshold) {
+            matched = cluster;
+            break;
+          }
+        }
+        if (matched) {
+          matched.events.push(...point.events);
+          matched.x = matched.events.reduce((sum, event) => sum + project(event.lat, event.lng).x, 0) / matched.events.length;
+          matched.y = matched.events.reduce((sum, event) => sum + project(event.lat, event.lng).y, 0) / matched.events.length;
+        } else {
+          clusters.push({ x: point.x, y: point.y, events: [...point.events] });
+        }
+      }
+
+      return clusters;
+    }
+
+    function drawMarker(cluster) {
+      const group = document.createElementNS(SVG_NS, 'g');
+      group.setAttribute('class', 'marker-group');
+      group.setAttribute('tabindex', '0');
+      group.setAttribute('role', 'button');
+      group.setAttribute('aria-label', cluster.events.length === 1 ? cluster.events[0].title : `${cluster.events.length} Veranstaltungen`);
+
+      const ring = document.createElementNS(SVG_NS, 'circle');
+      ring.setAttribute('class', 'marker-ring');
+      ring.setAttribute('cx', cluster.x);
+      ring.setAttribute('cy', cluster.y);
+      ring.setAttribute('r', markerRingRadius(cluster));
+      ring.setAttribute('fill', 'none');
+      ring.setAttribute('stroke', YELLOW);
+      ring.setAttribute('stroke-width', 3);
+
+      const dot = document.createElementNS(SVG_NS, 'circle');
+      dot.setAttribute('class', cluster.events.length > 1 ? 'cluster-dot' : 'marker-dot');
+      dot.setAttribute('cx', cluster.x);
+      dot.setAttribute('cy', cluster.y);
+      dot.setAttribute('fill', NAVY);
+      dot.setAttribute('stroke', WHITE);
+      dot.setAttribute('stroke-width', 2.5);
+      dot.setAttribute('r', markerRadius(cluster));
+      dot.dataset.r = markerRadius(cluster);
+
+      group.append(ring, dot);
+
+      group.addEventListener('mouseenter', () => selectMarker(group, cluster));
+      group.addEventListener('mouseleave', (event) => scheduleCloseCard(event.relatedTarget));
+      group.addEventListener('focus', () => selectMarker(group, cluster));
+      group.addEventListener('blur', (event) => scheduleCloseCard(event.relatedTarget));
+      group.addEventListener('click', (event) => {
+        event.stopPropagation();
+        selectMarker(group, cluster);
+      });
+      group.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          selectMarker(group, cluster);
+        }
+      });
+
+      markerLayer.appendChild(group);
+    }
+
+    function markerRadius(cluster) {
+      return cluster.events.length > 1 ? Math.min(32, 20 + cluster.events.length * 1.5) : 18;
+    }
+
+    function markerRingRadius(cluster) {
+      return markerRadius(cluster) + 6;
+    }
+
+    function selectMarker(group, cluster) {
+      clearCloseCardTimer();
+      if (selectedMarker && selectedMarker !== group) resetMarker(selectedMarker);
+      selectedMarker = group;
+
+      const ring = group.querySelector('.marker-ring');
+      const dot = group.querySelector('.marker-dot, .cluster-dot');
+      if (ring) ring.setAttribute('opacity', 1);
+      if (dot) {
+        dot.setAttribute('fill', YELLOW);
+        dot.setAttribute('stroke', NAVY);
+        dot.setAttribute('r', Number(dot.dataset.r) + 2);
+      }
+
+      showCard(cluster);
+    }
+
+    function resetMarker(group) {
+      const ring = group.querySelector('.marker-ring');
+      const dot = group.querySelector('.marker-dot, .cluster-dot');
+      if (ring) ring.setAttribute('opacity', 0);
+      if (dot) {
+        dot.setAttribute('fill', NAVY);
+        dot.setAttribute('stroke', WHITE);
+        dot.setAttribute('r', dot.dataset.r);
+      }
+    }
+
+    function showCard(cluster) {
+      closeCard(false);
+
+      const card = document.createElement('div');
+      card.className = 'event-card';
+      card.setAttribute('role', 'dialog');
+      card.addEventListener('mouseenter', clearCloseCardTimer);
+      card.addEventListener('mouseleave', (event) => scheduleCloseCard(event.relatedTarget));
+      card.addEventListener('focusin', clearCloseCardTimer);
+      card.addEventListener('focusout', (event) => scheduleCloseCard(event.relatedTarget));
+
+      const sorted = [...cluster.events].sort(compareEvents);
+      for (const event of sorted) {
+        const block = document.createElement('div');
+        block.className = 'card-event';
+
+        const title = document.createElement('h3');
+        title.textContent = escapeText(event.title);
+
+        const date = document.createElement('p');
+        date.className = 'card-date';
+        date.textContent = formatDateRange(event);
+
+        const location = document.createElement('p');
+        location.className = 'card-location';
+        location.textContent = event.city || 'Vor Ort';
+
+        const link = document.createElement('a');
+        link.href = event.url;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.textContent = 'Zur Veranstaltung →';
+
+        block.append(title, date, location, link);
+        card.appendChild(block);
+      }
+
+      document.body.appendChild(card);
+      openCard = card;
+      positionCard(card, cluster.x, cluster.y);
+    }
+
+    function positionCard(card, svgX, svgY) {
+      const svgRect = mapSvg.getBoundingClientRect();
+      const scaleX = svgRect.width / 1000;
+      const scaleY = svgRect.height / 1000;
+      const markerX = svgRect.left + svgX * scaleX;
+      const markerY = svgRect.top + svgY * scaleY;
+      const gap = 18;
+      const sideClamp = 8;
+
+      const cardWidth = card.offsetWidth;
+      const cardHeight = card.offsetHeight;
+      let left = markerX - cardWidth / 2;
+      let top = markerY - cardHeight - gap;
+
+      if (top < sideClamp) top = markerY + gap;
+      if (top + cardHeight > window.innerHeight - sideClamp) {
+        top = window.innerHeight - cardHeight - sideClamp;
+      }
+      left = Math.max(sideClamp, Math.min(left, window.innerWidth - cardWidth - sideClamp));
+
+      card.style.left = `${left}px`;
+      card.style.top = `${top}px`;
+    }
+
+    function scheduleCloseCard(relatedTarget) {
+      if (relatedTarget && openCard && openCard.contains(relatedTarget)) return;
+      clearCloseCardTimer();
+      closeCardTimer = window.setTimeout(() => closeCard(), 120);
+    }
+
+    function clearCloseCardTimer() {
+      if (!closeCardTimer) return;
+      window.clearTimeout(closeCardTimer);
+      closeCardTimer = null;
+    }
+
+    function closeCard(reset = true) {
+      clearCloseCardTimer();
+      if (openCard) {
+        openCard.remove();
+        openCard = null;
+      }
+      if (reset && selectedMarker) {
+        resetMarker(selectedMarker);
+        selectedMarker = null;
+      }
+    }
+
+    window.addEventListener('resize', () => {
+      if (!allEvents.length) return;
+      renderMap(allEvents.filter(isGermanPhysical));
+      syncListHeight();
+    });
+
+    loadEvents();
+  </script>
+</body>
+</html>
