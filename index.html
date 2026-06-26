@@ -1,5 +1,6 @@
 <!doctype html>
 <html lang="de">
+
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -20,7 +21,9 @@
       background: var(--white);
     }
 
-    * { box-sizing: border-box; }
+    * {
+      box-sizing: border-box;
+    }
 
     html,
     body {
@@ -35,13 +38,16 @@
       line-height: 1.4;
     }
 
-    a { color: inherit; }
+    a {
+      color: inherit;
+    }
 
     .widget {
       width: 100%;
       max-width: 1120px;
       margin: 0 auto;
       padding: 28px 24px;
+      box-sizing: border-box;
       background: var(--white);
       overflow-x: auto;
     }
@@ -106,53 +112,109 @@
     }
 
     .event-list {
+      position: relative;
       list-style: none;
       margin: 0;
       padding: 0;
       background: var(--white);
     }
 
+    .event-list::before {
+      position: absolute;
+      top: 10px;
+      bottom: 0;
+      left: 24px;
+      width: 1px;
+      background: #c9c9c9;
+      content: "";
+    }
+
     .event-list-shell {
+      margin-bottom: 22px;
       overflow: hidden;
     }
 
     .event-item {
-      padding: 0 0 16px;
-      margin: 0 0 16px;
-      border-bottom: 1px solid var(--border);
+      position: relative;
+      min-height: 58px;
+      margin: 0;
+      padding: 0 0 20px 44px;
     }
 
-    .event-title {
-      display: inline;
-      color: var(--navy);
-      font-weight: 700;
+    .event-item::before {
+      position: absolute;
+      top: 4px;
+      left: 17px;
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      background: #bdbdbd;
+      content: "";
+    }
+
+    .event-item-link {
+      display: block;
+      color: inherit;
       text-decoration: none;
     }
 
-    .event-title:hover,
-    .event-title:focus-visible {
+    .event-title {
+      display: block;
+      color: var(--navy);
+      font-weight: 400;
+      line-height: 1.28;
+      text-decoration: none;
+    }
+
+    .event-item-link:hover .event-title,
+    .event-item-link:focus-visible .event-title {
       text-decoration: underline;
       text-underline-offset: 3px;
     }
 
     .event-date {
-      margin-top: 4px;
-      color: var(--muted);
-      font-weight: 400;
+      display: inline;
+      margin: 0 4px 2px 0;
+      color: #111;
+      font-size: 14px;
+      font-weight: 700;
     }
 
-    .all-events-link {
+    .event-category {
       display: inline-block;
-      margin-top: 0;
-      color: var(--muted);
-      font-weight: 400;
+      margin-bottom: 2px;
+      padding: 0 3px;
+      background: var(--yellow);
+      color: #111;
+      font-size: 11px;
+      font-weight: 700;
+      line-height: 1.45;
+      vertical-align: 1px;
+    }
+
+    .event-location {
+      margin-top: 4px;
+      color: #aaa;
+      font-size: 11px;
+      line-height: 1.2;
+    }
+
+    .btn.btn-lg.btn-primary.bg-color-default {
+      display: inline-block;
+      margin-top: 4px;
+      padding: 9px 16px;
+      background: var(--yellow);
+      color: #111;
+      font-size: 17px;
+      font-weight: 700;
+      line-height: 1.3;
       text-decoration: none;
     }
 
-    .all-events-link:hover,
-    .all-events-link:focus-visible {
-      text-decoration: underline;
-      text-underline-offset: 3px;
+    .btn.btn-lg.btn-primary.bg-color-default:hover,
+    .btn.btn-lg.btn-primary.bg-color-default:focus-visible {
+      background: #d9ad00;
+      text-decoration: none;
     }
 
     .event-card {
@@ -180,7 +242,7 @@
       font-weight: 400;
     }
 
-    .event-card a {
+    .event-card a:not(.card-event) {
       display: inline-block;
       margin-top: 8px;
       color: var(--navy);
@@ -188,12 +250,28 @@
       text-decoration: none;
     }
 
-    .event-card a:hover,
-    .event-card a:focus-visible { text-decoration: underline; }
+    .event-card a:not(.card-event):hover,
+    .event-card a:not(.card-event):focus-visible {
+      text-decoration: underline;
+    }
 
-    .event-card:hover { display: block; }
+    .event-card:hover {
+      display: block;
+    }
 
-    .event-card .card-event + .card-event {
+    .event-card .card-event {
+      display: block;
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .event-card .card-event:hover h3,
+    .event-card .card-event:focus-visible h3 {
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    .event-card .card-event+.card-event {
       margin-top: 12px;
       padding-top: 12px;
       border-top: 1px solid var(--border);
@@ -212,8 +290,8 @@
       }
 
       .map-shell {
-        width: min(100%, 420px);
-        margin: 0 auto;
+        width: calc(100% + 32px);
+        margin-left: -16px;
       }
 
       .section-label {
@@ -226,30 +304,77 @@
     }
   </style>
 </head>
+
 <body>
   <main class="widget" aria-label="GI Veranstaltungen">
     <div class="columns">
       <section aria-labelledby="local-events-label">
         <h2 class="section-label" id="local-events-label">Vor Ort</h2>
         <div class="map-shell" id="mapShell">
-          <svg class="map-svg" id="mapSvg" viewBox="0 0 1000 1000" role="img" aria-label="Deutschlandkarte mit GI-Veranstaltungen" xmlns="http://www.w3.org/2000/svg">
+          <svg class="map-svg" id="mapSvg" viewBox="0 0 1000 1000" role="img"
+            aria-label="Deutschlandkarte mit GI-Veranstaltungen" xmlns="http://www.w3.org/2000/svg">
             <g class="states" aria-hidden="true">
-        <path id="DESH" data-name="Schleswig-Holstein" d="M461.4,259.2 L542.8,171.6 L543.4,137.1 L471.4,108 L470.1,59.5 L424.5,78.7 L370.7,62.1 L373.9,133.1 L390.2,179.5 L341.9,240 L328.6,213 L269.1,219.7 L260.5,235.6 L461.4,259.2 Z"><title>Schleswig-Holstein</title></path>
-        <path id="DEMV" data-name="Mecklenburg-Vorpommern" d="M461.4,259.2 L540.2,321.8 L618.7,315.2 L761.4,202.8 L735.6,172.8 L655.2,123.8 L615.1,157.8 L542.6,181 L542.8,171.6 L461.4,259.2 Z"><title>Mecklenburg-Vorpommern</title></path>
-        <path id="DEHH" data-name="Hamburg" d="M463.3,237.1 a12,12 0 1,0 24,0 a12,12 0 1,0 -24,0 Z"><title>Hamburg</title></path>
-        <path id="DEHB" data-name="Bremen" d="M380.3,294.3 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0 Z"><title>Bremen</title></path>
-        <path id="DENI" data-name="Niedersachsen" d="M510.3,455.5 L540.2,321.8 L461.4,259.2 L260.5,235.6 L255.2,245.5 L268.5,286.5 L264.7,310.1 L389.3,505.5 L408.8,513.3 L510.3,455.5 Z"><title>Niedersachsen</title></path>
-        <path id="DEBB" data-name="Brandenburg" d="M618.7,315.2 L667.2,470.7 L807.4,427.8 L809.6,412.3 L791.9,348.9 L766.1,306.1 L785.9,273.9 L769.3,212 L761.4,202.8 L618.7,315.2 Z"><title>Brandenburg</title></path>
-        <path id="DEBE" data-name="Berlin" d="M705.3,361.4 a13,13 0 1,0 26,0 a13,13 0 1,0 -26,0 Z"><title>Berlin</title></path>
-        <path id="DEST" data-name="Sachsen-Anhalt" d="M644,498.6 L667.2,470.7 L618.7,315.2 L540.2,321.8 L510.3,455.5 L644,498.6 Z"><title>Sachsen-Anhalt</title></path>
-        <path id="DENW" data-name="Nordrhein-Westfalen" d="M237.6,626.7 L389.3,505.5 L264.7,310.1 L250.7,395.9 L232.7,440.3 L189.9,440.3 L201.8,561.8 L194.7,629.7 L237.6,626.7 Z"><title>Nordrhein-Westfalen</title></path>
-        <path id="DEHE" data-name="Hessen" d="M408.8,513.3 L389.3,505.5 L237.6,626.7 L265.9,653.4 L475.5,642.3 L408.8,513.3 Z"><title>Hessen</title></path>
-        <path id="DETH" data-name="Thüringen" d="M475.5,642.3 L490.8,669.2 L552.7,702 L651.5,689.9 L651,676.8 L647.8,656.6 L635.3,623.1 L648.7,616.7 L644,498.6 L510.3,455.5 L408.8,513.3 L475.5,642.3 Z"><title>Thüringen</title></path>
-        <path id="DESN" data-name="Sachsen" d="M644,498.6 L648.7,616.7 L687.1,598.3 L713.6,569.9 L764.7,547.7 L782.6,525.8 L801.4,539 L833.2,527 L804,452.8 L807.4,427.8 L667.2,470.7 L644,498.6 Z M653.2,690.8 L651,676.8 L651.5,689.9 L653.2,690.8 Z"><title>Sachsen</title></path>
-        <path id="DERP" data-name="Rheinland-Pfalz" d="M347.5,739.7 L490.8,669.2 L475.5,642.3 L265.9,653.4 L347.5,739.7 Z"><title>Rheinland-Pfalz</title></path>
-        <path id="DESL" data-name="Saarland" d="M265.9,653.4 L237.6,626.7 L194.7,629.7 L193.7,638.7 L208,664.2 L203.9,713.3 L237.6,742.4 L339.9,762.7 L347.5,739.7 L265.9,653.4 Z M304.2,837.9 L298.2,889.6 L339.2,765 L304.2,837.9 Z"><title>Saarland</title></path>
-        <path id="DEBW" data-name="Baden-Württemberg" d="M552.7,702 L490.8,669.2 L347.5,739.7 L339.9,762.7 L340.3,762.7 L339.2,765 L298.2,889.6 L295.2,915 L355.8,915.7 L370.4,892.3 L446.8,925.2 L463.3,920.7 L552.7,702 Z"><title>Baden-Württemberg</title></path>
-        <path id="DEBY" data-name="Bayern" d="M651.5,689.9 L552.7,702 L463.3,920.7 L468.3,919.3 L504.4,949 L514.5,920.8 L577.3,925.4 L628.3,906.1 L662.5,909.4 L684.7,931.4 L691.3,913.1 L681.2,842.6 L706.8,828.8 L731.9,778.3 L691.7,730.7 L655.3,703.9 L653.2,690.8 L651.5,689.9 Z"><title>Bayern</title></path>
+              <path id="DESH" data-name="Schleswig-Holstein"
+                d="M461.4,259.2 L542.8,171.6 L543.4,137.1 L471.4,108 L470.1,59.5 L424.5,78.7 L370.7,62.1 L373.9,133.1 L390.2,179.5 L341.9,240 L328.6,213 L269.1,219.7 L260.5,235.6 L461.4,259.2 Z">
+                <title>Schleswig-Holstein</title>
+              </path>
+              <path id="DEMV" data-name="Mecklenburg-Vorpommern"
+                d="M461.4,259.2 L540.2,321.8 L618.7,315.2 L761.4,202.8 L735.6,172.8 L655.2,123.8 L615.1,157.8 L542.6,181 L542.8,171.6 L461.4,259.2 Z">
+                <title>Mecklenburg-Vorpommern</title>
+              </path>
+              <path id="DEHH" data-name="Hamburg" d="M463.3,237.1 a12,12 0 1,0 24,0 a12,12 0 1,0 -24,0 Z">
+                <title>Hamburg</title>
+              </path>
+              <path id="DEHB" data-name="Bremen" d="M380.3,294.3 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0 Z">
+                <title>Bremen</title>
+              </path>
+              <path id="DENI" data-name="Niedersachsen"
+                d="M510.3,455.5 L540.2,321.8 L461.4,259.2 L260.5,235.6 L255.2,245.5 L268.5,286.5 L264.7,310.1 L389.3,505.5 L408.8,513.3 L510.3,455.5 Z">
+                <title>Niedersachsen</title>
+              </path>
+              <path id="DEBB" data-name="Brandenburg"
+                d="M618.7,315.2 L667.2,470.7 L807.4,427.8 L809.6,412.3 L791.9,348.9 L766.1,306.1 L785.9,273.9 L769.3,212 L761.4,202.8 L618.7,315.2 Z">
+                <title>Brandenburg</title>
+              </path>
+              <path id="DEBE" data-name="Berlin" d="M705.3,361.4 a13,13 0 1,0 26,0 a13,13 0 1,0 -26,0 Z">
+                <title>Berlin</title>
+              </path>
+              <path id="DEST" data-name="Sachsen-Anhalt"
+                d="M644,498.6 L667.2,470.7 L618.7,315.2 L540.2,321.8 L510.3,455.5 L644,498.6 Z">
+                <title>Sachsen-Anhalt</title>
+              </path>
+              <path id="DENW" data-name="Nordrhein-Westfalen"
+                d="M237.6,626.7 L389.3,505.5 L264.7,310.1 L250.7,395.9 L232.7,440.3 L189.9,440.3 L201.8,561.8 L194.7,629.7 L237.6,626.7 Z">
+                <title>Nordrhein-Westfalen</title>
+              </path>
+              <path id="DEHE" data-name="Hessen"
+                d="M408.8,513.3 L389.3,505.5 L237.6,626.7 L265.9,653.4 L475.5,642.3 L408.8,513.3 Z">
+                <title>Hessen</title>
+              </path>
+              <path id="DETH" data-name="Thüringen"
+                d="M475.5,642.3 L490.8,669.2 L552.7,702 L651.5,689.9 L651,676.8 L647.8,656.6 L635.3,623.1 L648.7,616.7 L644,498.6 L510.3,455.5 L408.8,513.3 L475.5,642.3 Z">
+                <title>Thüringen</title>
+              </path>
+              <path id="DESN" data-name="Sachsen"
+                d="M644,498.6 L648.7,616.7 L687.1,598.3 L713.6,569.9 L764.7,547.7 L782.6,525.8 L801.4,539 L833.2,527 L804,452.8 L807.4,427.8 L667.2,470.7 L644,498.6 Z M653.2,690.8 L651,676.8 L651.5,689.9 L653.2,690.8 Z">
+                <title>Sachsen</title>
+              </path>
+              <path id="DERP" data-name="Rheinland-Pfalz"
+                d="M347.5,739.7 L490.8,669.2 L475.5,642.3 L265.9,653.4 L347.5,739.7 Z">
+                <title>Rheinland-Pfalz</title>
+              </path>
+              <path id="DESL" data-name="Saarland"
+                d="M265.9,653.4 L237.6,626.7 L194.7,629.7 L193.7,638.7 L208,664.2 L203.9,713.3 L237.6,742.4 L339.9,762.7 L347.5,739.7 L265.9,653.4 Z M304.2,837.9 L298.2,889.6 L339.2,765 L304.2,837.9 Z">
+                <title>Saarland</title>
+              </path>
+              <path id="DEBW" data-name="Baden-Württemberg"
+                d="M552.7,702 L490.8,669.2 L347.5,739.7 L339.9,762.7 L340.3,762.7 L339.2,765 L298.2,889.6 L295.2,915 L355.8,915.7 L370.4,892.3 L446.8,925.2 L463.3,920.7 L552.7,702 Z">
+                <title>Baden-Württemberg</title>
+              </path>
+              <path id="DEBY" data-name="Bayern"
+                d="M651.5,689.9 L552.7,702 L463.3,920.7 L468.3,919.3 L504.4,949 L514.5,920.8 L577.3,925.4 L628.3,906.1 L662.5,909.4 L684.7,931.4 L691.3,913.1 L681.2,842.6 L706.8,828.8 L731.9,778.3 L691.7,730.7 L655.3,703.9 L653.2,690.8 L651.5,689.9 Z">
+                <title>Bayern</title>
+              </path>
             </g>
             <g id="markerLayer" aria-label="Veranstaltungsorte"></g>
           </svg>
@@ -262,7 +387,7 @@
         <div class="event-list-shell" id="eventListShell">
           <ul class="event-list" id="eventList" aria-live="polite"></ul>
         </div>
-        <a class="all-events-link" href="#" aria-label="Alle Veranstaltungen anzeigen">Siehe alle Veranstaltungen</a>
+        <a href="/aktuelles/veranstaltungen" class="btn btn-lg btn-primary bg-color-default" style="--bg-color:#"><span class="text-color-default" style="">Alle Veranstaltungen</span></a>
       </section>
     </div>
   </main>
@@ -297,9 +422,10 @@
       const start = parseIsoDate(event.dateStart);
       const end = parseIsoDate(event.dateEnd);
       if (!start) return '';
-      const fmt = new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
-      if (!end || event.dateEnd === event.dateStart) return fmt.format(start);
-      return `${fmt.format(start)} – ${fmt.format(end)}`;
+      const fullFmt = new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+      if (!end || event.dateEnd === event.dateStart) return fullFmt.format(start);
+      const shortFmt = new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit' });
+      return `${shortFmt.format(start)} - ${fullFmt.format(end)}`;
     }
 
     function parseIsoDate(value) {
@@ -358,18 +484,37 @@
         const item = document.createElement('li');
         item.className = 'event-item';
 
-        const link = document.createElement('a');
-        link.className = 'event-title';
-        link.href = event.url;
-        link.target = '_blank';
-        link.rel = 'noopener noreferrer';
-        link.textContent = escapeText(event.title);
+        const itemLink = document.createElement('a');
+        itemLink.className = 'event-item-link';
+        itemLink.href = event.url;
+        itemLink.target = '_blank';
+        itemLink.rel = 'noopener noreferrer';
 
         const date = document.createElement('div');
         date.className = 'event-date';
         date.textContent = formatDateRange(event);
 
-        item.append(link, date);
+        const category = event.category ? document.createElement('span') : null;
+        if (category) {
+          category.className = 'event-category';
+          category.textContent = escapeText(event.category);
+        }
+
+        const title = document.createElement('span');
+        title.className = 'event-title';
+        title.textContent = escapeText(event.title);
+
+        const location = event.city ? document.createElement('div') : null;
+        if (location) {
+          location.className = 'event-location';
+          location.textContent = escapeText(event.city);
+        }
+
+        itemLink.append(date);
+        if (category) itemLink.append(category);
+        itemLink.append(title);
+        if (location) itemLink.append(location);
+        item.append(itemLink);
         eventList.appendChild(item);
       }
 
@@ -378,17 +523,18 @@
 
     function syncListHeight() {
       const mapHeight = mapShell.offsetHeight;
+      const listTargetHeight = Math.max(mapHeight, 430);
       const items = Array.from(eventList.children);
       let visibleHeight = 0;
 
       for (const item of items) {
         const marginBottom = parseFloat(window.getComputedStyle(item).marginBottom) || 0;
         const itemBottom = item.offsetTop + item.offsetHeight + marginBottom;
-        if (itemBottom > mapHeight) break;
+        if (itemBottom > listTargetHeight) break;
         visibleHeight = itemBottom;
       }
 
-      eventListShell.style.maxHeight = `${visibleHeight || mapHeight}px`;
+      eventListShell.style.maxHeight = `${visibleHeight || listTargetHeight}px`;
     }
 
     function renderMap(events) {
@@ -456,7 +602,7 @@
       ring.setAttribute('r', markerRingRadius(cluster));
       ring.setAttribute('fill', 'none');
       ring.setAttribute('stroke', YELLOW);
-      ring.setAttribute('stroke-width', 3);
+      ring.setAttribute('stroke-width', 4);
 
       const dot = document.createElementNS(SVG_NS, 'circle');
       dot.setAttribute('class', cluster.events.length > 1 ? 'cluster-dot' : 'marker-dot');
@@ -507,6 +653,7 @@
       if (dot) {
         dot.setAttribute('fill', YELLOW);
         dot.setAttribute('stroke', NAVY);
+        dot.setAttribute('stroke-width', 3.5);
         dot.setAttribute('r', Number(dot.dataset.r) + 2);
       }
 
@@ -520,6 +667,7 @@
       if (dot) {
         dot.setAttribute('fill', NAVY);
         dot.setAttribute('stroke', WHITE);
+        dot.setAttribute('stroke-width', 2.5);
         dot.setAttribute('r', dot.dataset.r);
       }
     }
@@ -537,8 +685,11 @@
 
       const sorted = [...cluster.events].sort(compareEvents);
       for (const event of sorted) {
-        const block = document.createElement('div');
+        const block = document.createElement('a');
         block.className = 'card-event';
+        block.href = event.url;
+        block.target = '_blank';
+        block.rel = 'noopener noreferrer';
 
         const title = document.createElement('h3');
         title.textContent = escapeText(event.title);
@@ -551,13 +702,7 @@
         location.className = 'card-location';
         location.textContent = event.city || 'Vor Ort';
 
-        const link = document.createElement('a');
-        link.href = event.url;
-        link.target = '_blank';
-        link.rel = 'noopener noreferrer';
-        link.textContent = 'Zur Veranstaltung →';
-
-        block.append(title, date, location, link);
+        block.append(title, date, location);
         card.appendChild(block);
       }
 
@@ -623,4 +768,5 @@
     loadEvents();
   </script>
 </body>
+
 </html>
