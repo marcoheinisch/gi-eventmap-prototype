@@ -4,7 +4,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>GI Event Map</title>
+  <title>GI Event Map Demo</title>
+  <!-- Self-contained iframe-friendly GI event widget. Event data is loaded from events.json. -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
@@ -16,6 +17,14 @@
       --muted: #888;
       --state: #EAEAE4;
       --white: #fff;
+      --widget-embed-max-width: 420px;
+      --widget-page-max-width: 1120px;
+      --widget-padding-x: 16px;
+      --widget-padding-y: 20px;
+      --widget-gap: 28px;
+      --widget-page-gap: 44px;
+      --map-page-width: 360px;
+      --popup-width: 280px;
       font-family: "Source Sans 3", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       color: var(--navy);
       background: var(--white);
@@ -44,24 +53,24 @@
 
     .widget {
       width: 100%;
-      max-width: 1120px;
+      max-width: var(--widget-embed-max-width);
       margin: 0 auto;
-      padding: 28px 24px;
+      padding: var(--widget-padding-y) var(--widget-padding-x) 24px;
       box-sizing: border-box;
       background: var(--white);
-      overflow-x: auto;
+      overflow-x: visible;
     }
 
     .columns {
       display: grid;
-      grid-template-columns: minmax(250px, 0.78fr) minmax(380px, 1.62fr);
-      gap: 44px;
+      grid-template-columns: 1fr;
+      gap: var(--widget-gap);
       align-items: start;
-      min-width: 680px;
+      min-width: 0;
     }
 
     .section-label {
-      margin: 0 0 16px;
+      margin: 0 0 12px;
       color: var(--navy);
       font-size: 15px;
       font-weight: 700;
@@ -70,7 +79,8 @@
 
     .map-shell {
       position: relative;
-      width: min(100%, 360px);
+      width: calc(100% + (var(--widget-padding-x) * 2));
+      margin-left: calc(var(--widget-padding-x) * -1);
       background: var(--white);
     }
 
@@ -199,7 +209,7 @@
       line-height: 1.2;
     }
 
-    .btn.btn-lg.btn-primary.bg-color-default {
+    .all-events-button {
       display: inline-block;
       margin-top: 4px;
       padding: 9px 16px;
@@ -211,8 +221,8 @@
       text-decoration: none;
     }
 
-    .btn.btn-lg.btn-primary.bg-color-default:hover,
-    .btn.btn-lg.btn-primary.bg-color-default:focus-visible {
+    .all-events-button:hover,
+    .all-events-button:focus-visible {
       background: #d9ad00;
       text-decoration: none;
     }
@@ -220,7 +230,7 @@
     .event-card {
       position: fixed;
       z-index: 10;
-      width: min(280px, calc(100vw - 48px));
+      width: min(var(--popup-width), calc(100vw - (var(--widget-padding-x) * 2)));
       padding: 14px 16px 15px;
       border: 1px solid var(--border);
       background: var(--white);
@@ -240,19 +250,6 @@
       margin: 0 0 4px;
       color: var(--muted);
       font-weight: 400;
-    }
-
-    .event-card a:not(.card-event) {
-      display: inline-block;
-      margin-top: 8px;
-      color: var(--navy);
-      font-weight: 700;
-      text-decoration: none;
-    }
-
-    .event-card a:not(.card-event):hover,
-    .event-card a:not(.card-event):focus-visible {
-      text-decoration: underline;
     }
 
     .event-card:hover {
@@ -277,36 +274,35 @@
       border-top: 1px solid var(--border);
     }
 
-    @media (max-width: 720px) {
-      .widget {
-        padding: 20px 16px 24px;
-        overflow-x: visible;
+    .widget.is-page {
+      --widget-padding-x: 24px;
+      --widget-padding-y: 28px;
+      max-width: var(--widget-page-max-width);
+      padding: var(--widget-padding-y) var(--widget-padding-x) 24px;
+      overflow-x: auto;
+    }
+
+    @media (min-width: 721px) {
+      .widget.is-page .columns {
+        grid-template-columns: minmax(250px, 0.78fr) minmax(380px, 1.62fr);
+        gap: var(--widget-page-gap);
+        min-width: 680px;
       }
 
-      .columns {
-        grid-template-columns: 1fr;
-        gap: 28px;
-        min-width: 0;
+      .widget.is-page .map-shell {
+        width: min(100%, var(--map-page-width));
+        margin-left: 0;
       }
 
-      .map-shell {
-        width: calc(100% + 32px);
-        margin-left: -16px;
-      }
-
-      .section-label {
-        margin-bottom: 12px;
-      }
-
-      .event-card {
-        width: calc(100vw - 32px);
+      .widget.is-page .section-label {
+        margin-bottom: 16px;
       }
     }
   </style>
 </head>
 
 <body>
-  <main class="widget" aria-label="GI Veranstaltungen">
+  <main class="widget is-embed" id="eventWidget" aria-label="GI Veranstaltungen">
     <div class="columns">
       <section aria-labelledby="local-events-label">
         <h2 class="section-label" id="local-events-label">Vor Ort</h2>
@@ -387,18 +383,44 @@
         <div class="event-list-shell" id="eventListShell">
           <ul class="event-list" id="eventList" aria-live="polite"></ul>
         </div>
-        <a href="/aktuelles/veranstaltungen" class="btn btn-lg btn-primary bg-color-default" style="--bg-color:#"><span class="text-color-default" style="">Alle Veranstaltungen</span></a>
+        <a href="/aktuelles/veranstaltungen" class="all-events-button">Alle Veranstaltungen</a>
       </section>
     </div>
   </main>
 
   <script>
-    const EVENTS_URL = 'events.json';
+    const CONFIG = Object.freeze({
+      eventsUrl: 'events.json',
+      layoutParam: 'layout',
+      layouts: {
+        embed: 'is-embed',
+        page: 'is-page',
+      },
+      clusterThreshold: 14,
+      listMinimumHeight: 430,
+      marker: {
+        singleRadius: 18,
+        clusterBaseRadius: 20,
+        clusterGrowth: 1.5,
+        clusterMaxRadius: 32,
+        ringOffset: 6,
+        ringStrokeWidth: 4,
+        defaultStrokeWidth: 2.5,
+        hoverStrokeWidth: 3.5,
+        hoverRadiusIncrease: 2,
+      },
+      popup: {
+        closeDelay: 120,
+        gap: 18,
+        edgeClamp: 8,
+      },
+    });
     const NAVY = '#1B2744';
     const YELLOW = '#F5C400';
     const WHITE = '#fff';
     const SVG_NS = 'http://www.w3.org/2000/svg';
 
+    const eventWidget = document.getElementById('eventWidget');
     const markerLayer = document.getElementById('markerLayer');
     const eventList = document.getElementById('eventList');
     const eventListShell = document.getElementById('eventListShell');
@@ -450,9 +472,17 @@
       while (node.firstChild) node.removeChild(node.firstChild);
     }
 
+    function applyLayoutMode() {
+      const params = new URLSearchParams(window.location.search);
+      const requestedLayout = params.get(CONFIG.layoutParam);
+      const layout = requestedLayout === 'page' ? 'page' : 'embed';
+      eventWidget.classList.remove(CONFIG.layouts.embed, CONFIG.layouts.page);
+      eventWidget.classList.add(CONFIG.layouts[layout]);
+    }
+
     async function loadEvents() {
       try {
-        const response = await fetch(EVENTS_URL, { cache: 'no-store' });
+        const response = await fetch(CONFIG.eventsUrl, { cache: 'no-store' });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const data = await response.json();
         allEvents = Array.isArray(data) ? data : [];
@@ -523,7 +553,7 @@
 
     function syncListHeight() {
       const mapHeight = mapShell.offsetHeight;
-      const listTargetHeight = Math.max(mapHeight, 430);
+      const listTargetHeight = Math.max(mapHeight, CONFIG.listMinimumHeight);
       const items = Array.from(eventList.children);
       let visibleHeight = 0;
 
@@ -563,7 +593,7 @@
     function clusterPoints(points) {
       const rect = mapSvg.getBoundingClientRect();
       const scale = rect.width ? rect.width / 1000 : 1;
-      const threshold = 14 / scale;
+      const threshold = CONFIG.clusterThreshold / scale;
       const clusters = [];
 
       for (const point of points) {
@@ -602,7 +632,7 @@
       ring.setAttribute('r', markerRingRadius(cluster));
       ring.setAttribute('fill', 'none');
       ring.setAttribute('stroke', YELLOW);
-      ring.setAttribute('stroke-width', 4);
+      ring.setAttribute('stroke-width', CONFIG.marker.ringStrokeWidth);
 
       const dot = document.createElementNS(SVG_NS, 'circle');
       dot.setAttribute('class', cluster.events.length > 1 ? 'cluster-dot' : 'marker-dot');
@@ -610,7 +640,7 @@
       dot.setAttribute('cy', cluster.y);
       dot.setAttribute('fill', NAVY);
       dot.setAttribute('stroke', WHITE);
-      dot.setAttribute('stroke-width', 2.5);
+      dot.setAttribute('stroke-width', CONFIG.marker.defaultStrokeWidth);
       dot.setAttribute('r', markerRadius(cluster));
       dot.dataset.r = markerRadius(cluster);
 
@@ -635,11 +665,15 @@
     }
 
     function markerRadius(cluster) {
-      return cluster.events.length > 1 ? Math.min(32, 20 + cluster.events.length * 1.5) : 18;
+      if (cluster.events.length === 1) return CONFIG.marker.singleRadius;
+      return Math.min(
+        CONFIG.marker.clusterMaxRadius,
+        CONFIG.marker.clusterBaseRadius + cluster.events.length * CONFIG.marker.clusterGrowth
+      );
     }
 
     function markerRingRadius(cluster) {
-      return markerRadius(cluster) + 6;
+      return markerRadius(cluster) + CONFIG.marker.ringOffset;
     }
 
     function selectMarker(group, cluster) {
@@ -653,8 +687,8 @@
       if (dot) {
         dot.setAttribute('fill', YELLOW);
         dot.setAttribute('stroke', NAVY);
-        dot.setAttribute('stroke-width', 3.5);
-        dot.setAttribute('r', Number(dot.dataset.r) + 2);
+        dot.setAttribute('stroke-width', CONFIG.marker.hoverStrokeWidth);
+        dot.setAttribute('r', Number(dot.dataset.r) + CONFIG.marker.hoverRadiusIncrease);
       }
 
       showCard(cluster);
@@ -667,7 +701,7 @@
       if (dot) {
         dot.setAttribute('fill', NAVY);
         dot.setAttribute('stroke', WHITE);
-        dot.setAttribute('stroke-width', 2.5);
+        dot.setAttribute('stroke-width', CONFIG.marker.defaultStrokeWidth);
         dot.setAttribute('r', dot.dataset.r);
       }
     }
@@ -717,8 +751,8 @@
       const scaleY = svgRect.height / 1000;
       const markerX = svgRect.left + svgX * scaleX;
       const markerY = svgRect.top + svgY * scaleY;
-      const gap = 18;
-      const sideClamp = 8;
+      const gap = CONFIG.popup.gap;
+      const sideClamp = CONFIG.popup.edgeClamp;
 
       const cardWidth = card.offsetWidth;
       const cardHeight = card.offsetHeight;
@@ -738,7 +772,7 @@
     function scheduleCloseCard(relatedTarget) {
       if (relatedTarget && openCard && openCard.contains(relatedTarget)) return;
       clearCloseCardTimer();
-      closeCardTimer = window.setTimeout(() => closeCard(), 120);
+      closeCardTimer = window.setTimeout(() => closeCard(), CONFIG.popup.closeDelay);
     }
 
     function clearCloseCardTimer() {
@@ -765,6 +799,7 @@
       syncListHeight();
     });
 
+    applyLayoutMode();
     loadEvents();
   </script>
 </body>
