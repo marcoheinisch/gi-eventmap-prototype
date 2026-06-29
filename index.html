@@ -227,6 +227,22 @@
       text-decoration: none;
     }
 
+    .repo-link {
+      display: inline-block;
+      margin-top: 24px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 600;
+      text-decoration: none;
+    }
+
+    .repo-link:hover,
+    .repo-link:focus-visible {
+      color: var(--navy);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
     .event-card {
       position: fixed;
       z-index: 10;
@@ -386,6 +402,8 @@
         <a href="/aktuelles/veranstaltungen" class="all-events-button">Alle Veranstaltungen</a>
       </section>
     </div>
+    <a class="repo-link" href="https://github.com/marcoheinisch/gi-eventmap-prototype" target="_blank"
+      rel="noopener noreferrer">GitHub Repository</a>
   </main>
 
   <script>
