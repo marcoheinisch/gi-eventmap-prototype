@@ -22,6 +22,48 @@ const NOMINATIM_DELAY_MS = 1100;
 const NON_CATEGORY_TAGS = new Set(['Online', 'NotVisible']);
 // Online events carry the GI office as location; that is not a venue.
 const PLACEHOLDER_CITIES = new Set(['Bonn']);
+// Regionalgruppe events on rg-<slug>.gi.de often have no location field. Use the group's home city.
+const REGIONALGRUPPE_CITIES = {
+  'aachen': 'Aachen',
+  'berlin-brandenburg': 'Berlin',
+  'braunschweig': 'Braunschweig',
+  'bremen-oldenburg': 'Bremen',
+  'chemnitz': 'Chemnitz',
+  'deutscheseck': 'Koblenz',
+  'dortmund': 'Dortmund',
+  'dresden': 'Dresden',
+  'duesseldorf': 'Düsseldorf',
+  'hamburg': 'Hamburg',
+  'hannover': 'Hannover',
+  'ilmenau': 'Ilmenau',
+  'ingolstadt': 'Ingolstadt',
+  'kaiserslautern': 'Kaiserslautern',
+  'karlsruhe': 'Karlsruhe',
+  'koeln': 'Köln',
+  'leipzig': 'Leipzig',
+  'mittelfranken': 'Nürnberg',
+  'mittelhessen': 'Gießen',
+  'muenchen': 'München',
+  'muensterland': 'Münster',
+  'nordhessen': 'Kassel',
+  'oberfranken': 'Bamberg',
+  'ostbayern': 'Regensburg',
+  'ostwestfalen': 'Bielefeld',
+  'paderborn': 'Paderborn',
+  'rhein-main': 'Frankfurt am Main',
+  'rhein-neckar': 'Mannheim',
+  'rostock': 'Rostock',
+  'ruhrgebiet': 'Essen',
+  'sachsen-anhalt': 'Magdeburg',
+  'schleswig-holstein': 'Kiel',
+  'schwaben-allgaeu': 'Augsburg',
+  'stuttgart': 'Stuttgart',
+  'suedbaden': 'Freiburg im Breisgau',
+  'thueringen-ost': 'Jena',
+  'trier-luxemburg': 'Trier',
+  'ulm-ravensburg': 'Ulm',
+  'wuerzburg': 'Würzburg'
+};
 
 main().catch((error) => {
   console.error(error);
@@ -38,7 +80,9 @@ async function main() {
 
   for (const event of events) {
     if (event.online || !event.city) continue;
-    const resolved = await geocodeCity(event.city, cache);
+    // "Berlin-Dahlem" or "München-Obersendling": fall back to the part before the hyphen.
+    const resolved = await geocodeCity(event.city, cache)
+      || (event.city.includes('-') ? await geocodeCity(event.city.split('-')[0].trim(), cache) : null);
     if (resolved) {
       event.lat = resolved.lat;
       event.lng = resolved.lng;
@@ -94,7 +138,8 @@ async function fetchText(url) {
 function parseEventList(html, baseUrl) {
   const events = [];
 
-  for (const part of String(html).split('<div class="wiro-eventListItem">').slice(1)) {
+  for (const chunk of String(html).split('<div class="wiro-eventListItem">').slice(1)) {
+    const part = itemOnly(chunk);
     const titleBlock = between(part, 'wiro-eventListItem-title">', '</h3>');
     const link = titleBlock.match(/<a\s+[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/i);
     if (!link) continue;
@@ -133,6 +178,7 @@ function normalizeEvent(raw) {
   const online = raw.tags.includes('Online') || raw.city === 'Online';
   let city = raw.city === 'Online' ? null : raw.city;
   if (online && city && PLACEHOLDER_CITIES.has(city)) city = null;
+  if (!online && !city) city = regionalgruppeCity(raw.url);
 
   return {
     title: raw.title,
@@ -145,6 +191,20 @@ function normalizeEvent(raw) {
     lng: null,
     online
   };
+}
+
+// The location div is the last field of an item; cut everything after it so the last item on a
+// page does not pick up footer links ("Impressum", "Termin eintragen") as tags.
+function itemOnly(chunk) {
+  const loc = chunk.indexOf('wiro-eventListItem-location');
+  if (loc < 0) return '';
+  const end = chunk.indexOf('</div>', loc);
+  return end < 0 ? chunk : chunk.slice(0, end + 6);
+}
+
+function regionalgruppeCity(url) {
+  const match = String(url).match(/^https?:\/\/rg-([a-z0-9-]+)\.gi\.de\//);
+  return (match && REGIONALGRUPPE_CITIES[match[1]]) || null;
 }
 
 function between(source, startMarker, endMarker) {

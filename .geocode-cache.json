@@ -141,5 +141,13 @@
     "lng": 10.653394
   },
   "Prag": null,
-  "Salzburg": null
+  "Salzburg": null,
+  "Karlsruhe": {
+    "lat": 49.00687,
+    "lng": 8.40342
+  },
+  "Freiburg im Breisgau": {
+    "lat": 47.99609,
+    "lng": 7.8494
+  }
 }
