@@ -313,16 +313,50 @@
     }
 
     @media (min-width: 1200px) {
+      /* Two timeline columns: the first fills top to bottom, the second continues chronologically. */
       .widget.is-page .event-list {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
+        column-count: 2;
         column-gap: 32px;
+        column-fill: auto;
+      }
+
+      .widget.is-page .event-item {
+        break-inside: avoid;
       }
 
       .widget.is-page .section-label {
         margin-bottom: 16px;
       }
     }
+    .range-filter {
+      display: flex;
+      gap: 6px;
+      margin: 0 0 18px;
+    }
+
+    .range-button {
+      padding: 5px 12px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--white);
+      color: var(--navy);
+      font: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .range-button:hover,
+    .range-button:focus-visible {
+      border-color: var(--navy);
+    }
+
+    .range-button.is-active {
+      background: var(--navy);
+      border-color: var(--navy);
+      color: var(--white);
+    }
+
     .disclaimer { font-size: 0.8rem; color: #6b7280; margin: 0.75rem 0 0; }
     .disclaimer a { color: inherit; }
   </style>
@@ -330,6 +364,11 @@
 
 <body>
   <main class="widget is-embed" id="eventWidget" aria-label=" GI-Veranstaltungen (Widget-Prototyp)">
+    <div class="range-filter" role="group" aria-label="Zeitraum">
+      <button type="button" class="range-button" data-months="2">2 Monate</button>
+      <button type="button" class="range-button" data-months="4">4 Monate</button>
+      <button type="button" class="range-button" data-months="6">6 Monate</button>
+    </div>
     <div class="columns">
       <section aria-labelledby="local-events-label">
         <h2 class="section-label" id="local-events-label">Vor Ort</h2>
@@ -423,6 +462,9 @@
     const CONFIG = Object.freeze({
       eventsUrl: 'events.json',
       layoutParam: 'layout',
+      monthsParam: 'months',
+      monthOptions: [2, 4, 6],
+      defaultMonths: 6,
       layouts: {
         embed: 'is-embed',
         page: 'is-page',
@@ -464,6 +506,8 @@
     let openCard = null;
     let closeCardTimer = null;
     let allEvents = [];
+    let rangeMonths = CONFIG.defaultMonths;
+    const rangeButtons = Array.from(document.querySelectorAll('.range-button'));
 
     function project(lat, lng) {
       const x = lng * 71.26 - 236.9;
@@ -504,6 +548,11 @@
       while (node.firstChild) node.removeChild(node.firstChild);
     }
 
+    function initialMonths() {
+      const requested = Number(new URLSearchParams(window.location.search).get(CONFIG.monthsParam));
+      return CONFIG.monthOptions.includes(requested) ? requested : CONFIG.defaultMonths;
+    }
+
     function applyLayoutMode() {
       const params = new URLSearchParams(window.location.search);
       const requestedLayout = params.get(CONFIG.layoutParam);
@@ -525,9 +574,37 @@
         return;
       }
 
-      renderMap(allEvents.filter(isGermanPhysical));
-      renderList(allEvents.filter(isRemoteOrInternational));
+      render();
+    }
+
+    function render() {
+      const events = allEvents.filter(isWithinRange);
+      renderMap(events.filter(isGermanPhysical));
+      renderList(events.filter(isRemoteOrInternational));
       syncListHeight();
+    }
+
+    function isWithinRange(event) {
+      const start = parseIsoDate(event.dateStart);
+      if (!start) return false;
+      const limit = new Date();
+      limit.setHours(0, 0, 0, 0);
+      limit.setMonth(limit.getMonth() + rangeMonths);
+      return start < limit;
+    }
+
+    function setRange(months) {
+      rangeMonths = months;
+      for (const button of rangeButtons) {
+        const active = Number(button.dataset.months) === months;
+        button.classList.toggle('is-active', active);
+        button.setAttribute('aria-pressed', String(active));
+      }
+      if (allEvents.length) render();
+    }
+
+    for (const button of rangeButtons) {
+      button.addEventListener('click', () => setRange(Number(button.dataset.months)));
     }
 
     function renderList(events) {
@@ -590,6 +667,16 @@
         ? window.innerHeight - eventListShell.getBoundingClientRect().top - CONFIG.listBottomReserve
         : 0;
       const listTargetHeight = Math.max(mapHeight, CONFIG.listMinimumHeight, viewportRoom);
+
+      // Multi-column mode: fix the list height so the columns fill in order; overflow beyond the
+      // second column is clipped by the shell.
+      const multiColumn = isPage && window.matchMedia('(min-width: 1200px)').matches;
+      eventList.style.height = multiColumn ? `${listTargetHeight}px` : '';
+      if (multiColumn) {
+        eventListShell.style.maxHeight = `${listTargetHeight}px`;
+        return;
+      }
+
       const items = Array.from(eventList.children);
       let visibleHeight = 0;
 
@@ -831,11 +918,12 @@
 
     window.addEventListener('resize', () => {
       if (!allEvents.length) return;
-      renderMap(allEvents.filter(isGermanPhysical));
+      renderMap(allEvents.filter(isWithinRange).filter(isGermanPhysical));
       syncListHeight();
     });
 
     applyLayoutMode();
+    setRange(initialMonths());
     loadEvents();
   </script>
 </body>
