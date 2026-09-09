@@ -28,9 +28,17 @@ jobs:
         with:
           node-version: '22'
 
+      # Plain pushes reuse the events.json that is already published; only the schedule and
+      # manual runs contact gi.de. If nothing is published yet, fall back to scraping.
       - name: Build events.json
-        run: node update-events.js
+        run: |
+          if [ "${{ github.event_name }}" = "push" ] && curl -fsSL "$PUBLISHED_EVENTS_URL" -o events.json; then
+            echo "Reused published events.json ($(wc -c < events.json) bytes)"
+          else
+            node update-events.js
+          fi
         env:
+          PUBLISHED_EVENTS_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/events.json
           GI_EVENT_USER_AGENT: gi-eventmap-prototype/0.1 (+https://github.com/${{ github.repository }})
 
       - name: Persist geocode cache

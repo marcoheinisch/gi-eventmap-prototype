@@ -123,12 +123,32 @@ function buildPageUrl(page) {
 }
 
 async function fetchText(url) {
-  const response = await fetch(url, {
-    headers: { accept: 'text/html', 'user-agent': USER_AGENT },
-    signal: AbortSignal.timeout(30000)
-  });
+  const response = await fetchWithRetry(url, { accept: 'text/html' });
   if (!response.ok) throw new Error(`Failed to fetch ${url}: HTTP ${response.status}`);
   return response.text();
+}
+
+// Connection timeouts and 5xx answers are retried a few times with growing pauses.
+async function fetchWithRetry(url, headers, attempts = 4) {
+  let lastError;
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    try {
+      const response = await fetch(url, {
+        headers: { ...headers, 'user-agent': USER_AGENT },
+        signal: AbortSignal.timeout(30000)
+      });
+      if (response.status < 500) return response;
+      lastError = new Error(`HTTP ${response.status}`);
+    } catch (error) {
+      lastError = error;
+    }
+    if (attempt < attempts) {
+      const wait = 10000 * attempt;
+      console.error(`Attempt ${attempt} for ${url} failed (${lastError.cause?.code || lastError.message}); retrying in ${wait / 1000}s`);
+      await sleep(wait);
+    }
+  }
+  throw lastError;
 }
 
 // ---------- parsing ----------
@@ -260,10 +280,7 @@ async function geocodeCity(city, cache) {
   url.searchParams.set('limit', '1');
 
   console.error(`Geocoding ${city}`);
-  const response = await fetch(url, {
-    headers: { accept: 'application/json', 'user-agent': USER_AGENT },
-    signal: AbortSignal.timeout(30000)
-  });
+  const response = await fetchWithRetry(url, { accept: 'application/json' });
   if (!response.ok) throw new Error(`Nominatim failed for ${city}: HTTP ${response.status}`);
 
   const results = await response.json();
