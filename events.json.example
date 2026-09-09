@@ -1,0 +1,46 @@
+[
+  {
+    "title": "Beispiel: Regionalgruppen-Vortrag",
+    "url": "https://gi.de/aktuelles/veranstaltungen",
+    "dateStart": "2026-10-06",
+    "dateEnd": "2026-10-06",
+    "category": "Vortrag",
+    "city": "Berlin",
+    "lat": 52.510885,
+    "lng": 13.398937,
+    "online": false
+  },
+  {
+    "title": "Beispiel: Fachbereichs-Konferenz",
+    "url": "https://gi.de/aktuelles/veranstaltungen",
+    "dateStart": "2026-11-16",
+    "dateEnd": "2026-11-18",
+    "category": "Konferenz",
+    "city": "Dresden",
+    "lat": 51.049329,
+    "lng": 13.738144,
+    "online": false
+  },
+  {
+    "title": "Beispiel: Online-Seminar",
+    "url": "https://gi.de/aktuelles/veranstaltungen",
+    "dateStart": "2026-10-20",
+    "dateEnd": "2026-10-20",
+    "category": "Seminar",
+    "city": null,
+    "lat": null,
+    "lng": null,
+    "online": true
+  },
+  {
+    "title": "Beispiel: Internationale Tagung",
+    "url": "https://gi.de/aktuelles/veranstaltungen",
+    "dateStart": "2026-12-01",
+    "dateEnd": "2026-12-03",
+    "category": "Konferenz",
+    "city": "Innsbruck",
+    "lat": null,
+    "lng": null,
+    "online": false
+  }
+]

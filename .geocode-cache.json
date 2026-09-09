@@ -1,0 +1,145 @@
+{
+  "Frankfurt am Main": {
+    "lat": 50.110644,
+    "lng": 8.682092
+  },
+  "Bochum": {
+    "lat": 51.481811,
+    "lng": 7.219664
+  },
+  "Tönning": {
+    "lat": 54.318893,
+    "lng": 8.943705
+  },
+  "Sankt Augustin": {
+    "lat": 50.775278,
+    "lng": 7.189551
+  },
+  "Darmstadt": {
+    "lat": 49.872775,
+    "lng": 8.651177
+  },
+  "Düsseldorf": {
+    "lat": 51.225402,
+    "lng": 6.776314
+  },
+  "Berlin": {
+    "lat": 52.517389,
+    "lng": 13.395131
+  },
+  "Hamburg": {
+    "lat": 53.550172,
+    "lng": 10.001316
+  },
+  "Bonn": {
+    "lat": 50.735262,
+    "lng": 7.102463
+  },
+  "Frankfurt/M.": {
+    "lat": 50.110644,
+    "lng": 8.682092
+  },
+  "Paderborn": {
+    "lat": 51.717704,
+    "lng": 8.752653
+  },
+  "Bremen": {
+    "lat": 53.07582,
+    "lng": 8.807165
+  },
+  "Mainz": {
+    "lat": 49.999521,
+    "lng": 8.273625
+  },
+  "München": {
+    "lat": 48.137108,
+    "lng": 11.575382
+  },
+  "Köln": {
+    "lat": 50.938361,
+    "lng": 6.959974
+  },
+  "Augsburg": {
+    "lat": 48.369034,
+    "lng": 10.897952
+  },
+  "Hünfeld": {
+    "lat": 50.65546,
+    "lng": 9.776463
+  },
+  "Potsdam": {
+    "lat": 52.400931,
+    "lng": 13.05914
+  },
+  "Leipzig": {
+    "lat": 51.340632,
+    "lng": 12.374733
+  },
+  "Tutzing": {
+    "lat": 47.908636,
+    "lng": 11.279824
+  },
+  "Dresden": {
+    "lat": 51.049329,
+    "lng": 13.738144
+  },
+  "Innsbruck": null,
+  "Heidelberg": {
+    "lat": 49.409358,
+    "lng": 8.694724
+  },
+  "Bielefeld": {
+    "lat": 52.019101,
+    "lng": 8.531007
+  },
+  "Toronto": null,
+  "Lübeck": {
+    "lat": 53.866444,
+    "lng": 10.684738
+  },
+  "Frankfurt": {
+    "lat": 50.110644,
+    "lng": 8.682092
+  },
+  "Stralsund": {
+    "lat": 54.309631,
+    "lng": 13.082085
+  },
+  "Stuttgart": {
+    "lat": 48.778449,
+    "lng": 9.180013
+  },
+  "Bamberg": {
+    "lat": 49.891604,
+    "lng": 10.886848
+  },
+  "Berlin-Dahlem": null,
+  "Erlangen": {
+    "lat": 49.597747,
+    "lng": 11.003737
+  },
+  "München-Obersendling": null,
+  "Gießen": {
+    "lat": 50.586207,
+    "lng": 8.674231
+  },
+  "Nürnberg": {
+    "lat": 49.453872,
+    "lng": 11.077298
+  },
+  "Böblingen": {
+    "lat": 48.684969,
+    "lng": 9.011344
+  },
+  "Kaiserslautern": {
+    "lat": 49.443217,
+    "lng": 7.768995
+  },
+  "Bludenz": null,
+  "Triesdorf": {
+    "lat": 49.203136,
+    "lng": 10.653394
+  },
+  "Prag": null,
+  "Salzburg": null
+}

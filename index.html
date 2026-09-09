@@ -4,8 +4,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>GI Event Map Demo</title>
-  <!-- Self-contained iframe-friendly GI event widget. Event data is loaded from events.json. -->
+  <title>Inoffizielles Widget-Prototyp: GI-Veranstaltungskarte</title>
+  <!-- Inoffizielles Widget-Prototyp, unabhängig von der Gesellschaft für Informatik e.V. Event data is loaded from events.json. -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
@@ -314,11 +314,13 @@
         margin-bottom: 16px;
       }
     }
+    .disclaimer { font-size: 0.8rem; color: #6b7280; margin: 0.75rem 0 0; }
+    .disclaimer a { color: inherit; }
   </style>
 </head>
 
 <body>
-  <main class="widget is-embed" id="eventWidget" aria-label="GI Veranstaltungen">
+  <main class="widget is-embed" id="eventWidget" aria-label=" GI-Veranstaltungen (Widget-Prototyp)">
     <div class="columns">
       <section aria-labelledby="local-events-label">
         <h2 class="section-label" id="local-events-label">Vor Ort</h2>
@@ -399,11 +401,13 @@
         <div class="event-list-shell" id="eventListShell">
           <ul class="event-list" id="eventList" aria-live="polite"></ul>
         </div>
-        <a href="/aktuelles/veranstaltungen" class="all-events-button">Alle Veranstaltungen</a>
+        <a href="https://gi.de/aktuelles/veranstaltungen" class="all-events-button" target="_blank" rel="noopener noreferrer">Alle Veranstaltungen</a>
       </section>
     </div>
-    <a class="repo-link" href="https://github.com/marcoheinisch/gi-eventmap-prototype" target="_blank"
-      rel="noopener noreferrer">GitHub Repository</a>
+    <p class="disclaimer">Inoffizielles Widget-Prototyp
+      Daten: <a href="https://gi.de/aktuelles/veranstaltungen" target="_blank" rel="noopener noreferrer">gi.de/aktuelles/veranstaltungen</a>
+      · <a class="repo-link" href="https://github.com/marcoheinisch/gi-eventmap-prototype" target="_blank" rel="noopener noreferrer">GitHub Repository</a>
+    </p>
   </main>
 
   <script>

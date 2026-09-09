@@ -1,0 +1,12 @@
+{
+  "name": "gi-eventmap-prototype",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Inoffizielles Widget-Prototyp: Karte kommender GI-Veranstaltungen",
+  "scripts": {
+    "update": "node update-events.js"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
