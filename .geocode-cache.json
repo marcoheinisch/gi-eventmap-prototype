@@ -149,5 +149,9 @@
   "Freiburg im Breisgau": {
     "lat": 47.99609,
     "lng": 7.8494
+  },
+  "Nordhausen": {
+    "lat": 51.505157,
+    "lng": 10.792532
   }
 }
