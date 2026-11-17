@@ -128,27 +128,22 @@ async function fetchText(url) {
   return response.text();
 }
 
-// Connection timeouts and 5xx answers are retried a few times with growing pauses.
-async function fetchWithRetry(url, headers, attempts = 4) {
-  let lastError;
-  for (let attempt = 1; attempt <= attempts; attempt++) {
-    try {
-      const response = await fetch(url, {
-        headers: { ...headers, 'user-agent': USER_AGENT },
-        signal: AbortSignal.timeout(30000)
-      });
-      if (response.status < 500) return response;
-      lastError = new Error(`HTTP ${response.status}`);
-    } catch (error) {
-      lastError = error;
-    }
-    if (attempt < attempts) {
-      const wait = 10000 * attempt;
-      console.error(`Attempt ${attempt} for ${url} failed (${lastError.cause?.code || lastError.message}); retrying in ${wait / 1000}s`);
-      await sleep(wait);
-    }
+// Only 5xx answers are retried: once after 10 s, once more after 30 s, then the run fails.
+// Network errors and timeouts fail immediately.
+const RETRY_DELAYS_MS = [10000, 30000];
+
+async function fetchWithRetry(url, headers) {
+  for (let attempt = 0; ; attempt++) {
+    const response = await fetch(url, {
+      headers: { ...headers, 'user-agent': USER_AGENT },
+      signal: AbortSignal.timeout(30000)
+    });
+    if (response.status < 500) return response;
+    if (attempt >= RETRY_DELAYS_MS.length) throw new Error(`HTTP ${response.status} for ${url}`);
+    const wait = RETRY_DELAYS_MS[attempt];
+    console.error(`HTTP ${response.status} for ${url}; retrying in ${wait / 1000}s`);
+    await sleep(wait);
   }
-  throw lastError;
 }
 
 // ---------- parsing ----------

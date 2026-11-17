@@ -2,7 +2,8 @@ name: Build and deploy
 
 on:
   schedule:
-    - cron: '23 4 */2 * *'
+    # Mondays and Thursdays: about 8-9 scrapes of gi.de per month.
+    - cron: '23 4 * * 1,4'
   push:
     branches: [main]
   workflow_dispatch:

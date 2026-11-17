@@ -2,8 +2,6 @@
 
 Ein inofficieller Prototyp, der kommende Veranstaltungen der Gesellschaft für Informatik e.V. (GI) auf einer Deutschlandkarte zeigt. 
 
-Veranstaltungsdaten stammen von [gi.de/aktuelles/veranstaltungen](https://gi.de/aktuelles/veranstaltungen) und verlinken dorthin.
-
 Live: https://marcoheinisch.github.io/gi-eventmap-prototype/
 
 ## Wie es funktioniert
@@ -14,17 +12,19 @@ Live: https://marcoheinisch.github.io/gi-eventmap-prototype/
   Keine Beschreibungen, keine Bilder.
 - Orte werden einmalig über Nominatim (OpenStreetMap) in Koordinaten übersetzt und in
   `.geocode-cache.json` gespeichert. Diese Datei enthält nur Stadtnamen und Koordinaten.
-- Ein GitHub-Actions-Workflow läuft alle zwei Tage, erzeugt `events.json` neu und veröffentlicht
+- Ein GitHub-Actions-Workflow läuft zweimal pro Woche (Mo und Do), erzeugt `events.json` neu und veröffentlicht
   `index.html` plus `events.json` über GitHub Pages. `events.json` wird nicht ins Repository
   committet; es existiert nur auf der veröffentlichten Seite.
 
 ## Datenquelle und Zugriff
 
-- Rund 15 HTTP-Anfragen pro Lauf, ein Lauf alle zwei Tage, 500 ms Pause zwischen Anfragen.
+- Veranstaltungsdaten stammen von [gi.de/aktuelles/veranstaltungen](https://gi.de/aktuelles/veranstaltungen) und verlinken dorthin.
+- Rund 15 HTTP-Anfragen pro Lauf, zwei Läufe pro Woche (etwa 8-9 im Monat), 500 ms Pause zwischen
+  Anfragen. Bei 5xx höchstens zwei Wiederholungen (nach 10 s und 30 s), danach bricht der Lauf ab.
 - Der Client identifiziert sich mit einem User-Agent, der auf dieses Repository verweist.
 - `robots.txt` von gi.de erlaubt den Zugriff auf die Veranstaltungsseiten.
 - Die Veranstaltungsdaten gehören der GI. Sie werden hier nur für diesen Prototyp aufbereitet;
-  die MIT-Lizenz dieses Repositories gilt für den Code, nicht für die Daten.
+
 
 ## Lokal ausführen
 
