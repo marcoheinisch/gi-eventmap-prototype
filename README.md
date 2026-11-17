@@ -33,5 +33,4 @@ cp events.json.example events.json   # oder: npm run update (holt echte Daten)
 python3 -m http.server 8080
 ```
 
-Dann `http://localhost:8080/index.html` öffnen. `?layout=page` zeigt das Seitenlayout.
-
+Dann `http://localhost:8080/index.html` öffnen.

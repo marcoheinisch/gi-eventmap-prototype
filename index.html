@@ -4,30 +4,38 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Inoffizielles Widget-Prototyp: GI-Veranstaltungskarte</title>
-  <!-- Inoffizielles Widget-Prototyp, unabhängig von der Gesellschaft für Informatik e.V. Event data is loaded from events.json. -->
+  <title>GI-Veranstaltungskarte (inoffizieller Prototyp)</title>
+  <!-- Inoffizieller Widget-Prototyp, unabhängig von der Gesellschaft für Informatik e.V. Event data is loaded from events.json. -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
       --navy: #1B2744;
+      --navy-hover: #2C3D66;
       --yellow: #F5C400;
+      --yellow-hover: #D9AD00;
       --border: #E2E2DC;
-      --muted: #888;
+      --muted: #6B6B6B;
+      --faint: #9A9A9A;
       --state: #EAEAE4;
       --white: #fff;
-      --widget-embed-max-width: 420px;
-      --widget-page-max-width: 1600px;
+      --timeline: #C9C9C9;
+      --widget-max-width: 1200px;
       --widget-padding-x: 16px;
       --widget-padding-y: 20px;
-      --widget-gap: 28px;
-      --widget-page-gap: 44px;
-      --map-page-width: 640px;
-      --popup-width: 280px;
+      --filter-bar-height: 0px;
       font-family: "Source Sans 3", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       color: var(--navy);
       background: var(--white);
+    }
+
+    /* More breathing room once the page is wide enough for the side-by-side layout. */
+    @media (min-width: 720px) {
+      :root {
+        --widget-padding-x: 32px;
+        --widget-padding-y: 32px;
+      }
     }
 
     * {
@@ -37,12 +45,10 @@
     html,
     body {
       margin: 0;
-      min-height: 100%;
       background: var(--white);
     }
 
     body {
-      font-family: "Source Sans 3", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       font-size: 16px;
       line-height: 1.4;
     }
@@ -51,330 +57,636 @@
       color: inherit;
     }
 
-    .widget {
-      width: 100%;
-      max-width: var(--widget-embed-max-width);
-      margin: 0 auto;
-      padding: var(--widget-padding-y) var(--widget-padding-x) 24px;
-      box-sizing: border-box;
-      background: var(--white);
-      overflow-x: visible;
+    button {
+      font: inherit;
+      color: inherit;
     }
 
-    .columns {
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      white-space: nowrap;
+    }
+
+    .widget {
+      container: widget / inline-size;
+      width: 100%;
+      max-width: var(--widget-max-width);
+      margin: 0 auto;
+      padding: var(--widget-padding-y) var(--widget-padding-x) 24px;
+      background: var(--white);
+    }
+
+    /* ---------- layout: stacked (narrow) ---------- */
+
+    .layout {
       display: grid;
-      grid-template-columns: 1fr;
-      gap: var(--widget-gap);
-      align-items: start;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 20px;
+    }
+
+    .map-panel {
       min-width: 0;
     }
 
-    .section-label {
-      margin: 0 0 12px;
-      color: var(--navy);
-      font-size: 15px;
-      font-weight: 700;
-      letter-spacing: 0.01em;
+    .list-panel {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
     }
+
+    /* ---------- map ---------- */
 
     .map-shell {
       position: relative;
-      width: calc(100% + (var(--widget-padding-x) * 2));
-      margin-left: calc(var(--widget-padding-x) * -1);
-      background: var(--white);
+      width: 100%;
+      max-width: 520px;
+      margin: 0 auto;
     }
 
     .map-svg {
       display: block;
       width: 100%;
       height: auto;
-      aspect-ratio: 1 / 1;
-      background: var(--white);
+      aspect-ratio: 690 / 930;
       overflow: visible;
+      touch-action: manipulation;
     }
 
     .states path {
       fill: var(--state);
-      stroke: #fff;
+      stroke: var(--white);
       stroke-width: 2;
       vector-effect: non-scaling-stroke;
     }
 
-    .marker-group {
+    .marker {
       cursor: pointer;
       outline: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .marker-hit {
+      fill: transparent;
+    }
+
+    .marker-dot {
+      fill: var(--navy);
+      stroke: var(--white);
+      stroke-width: 2px;
+      vector-effect: non-scaling-stroke;
+      transform-box: fill-box;
+      transform-origin: center;
+      transition: transform 120ms ease, fill 120ms ease;
+    }
+
+    .marker-count {
+      fill: var(--white);
+      font-weight: 700;
+      pointer-events: none;
+      user-select: none;
     }
 
     .marker-ring {
+      fill: none;
+      stroke: var(--navy);
+      stroke-width: 2px;
+      vector-effect: non-scaling-stroke;
       opacity: 0;
       pointer-events: none;
     }
 
-    .marker-group:focus .marker-ring,
-    .marker-group:focus-within .marker-ring {
+    .marker:focus-visible .marker-ring {
       opacity: 1;
     }
 
-    .empty-state,
-    .status {
-      color: var(--muted);
-      font-weight: 400;
+    @media (hover: hover) {
+      .marker:hover .marker-dot {
+        fill: var(--navy-hover);
+        transform: scale(1.15);
+      }
     }
 
-    .event-list {
-      position: relative;
-      list-style: none;
-      margin: 0;
-      padding: 0;
-      background: var(--white);
+    .marker.is-hinted .marker-dot {
+      fill: var(--yellow);
+      stroke: var(--navy);
+      transform: scale(1.15);
     }
 
-    .event-item::after {
+    .marker.is-hinted .marker-count {
+      fill: var(--navy);
+    }
+
+    .marker.is-selected .marker-dot,
+    .marker.is-selected:hover .marker-dot {
+      fill: var(--yellow);
+      stroke: var(--navy);
+      stroke-width: 2.5px;
+      transform: scale(1.2);
+    }
+
+    .marker.is-selected .marker-count {
+      fill: var(--navy);
+    }
+
+    .marker.is-muted {
+      opacity: 0.35;
+    }
+
+    .marker.is-muted:hover,
+    .marker.is-muted:focus-visible {
+      opacity: 1;
+    }
+
+    .map-tooltip {
       position: absolute;
-      top: 10px;
-      bottom: 0;
-      left: 24px;
-      width: 1px;
-      background: #c9c9c9;
+      z-index: 3;
+      padding: 4px 9px;
+      background: var(--navy);
+      color: var(--white);
+      font-size: 14px;
+      font-weight: 600;
+      line-height: 1.3;
+      white-space: nowrap;
+      pointer-events: none;
+      transform: translate(-50%, -100%);
+    }
+
+    /* ---------- filter chips ---------- */
+
+    .filter-bar {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      margin: 0 calc(var(--widget-padding-x) * -1);
+      padding: 8px var(--widget-padding-x);
+      background: var(--white);
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* Chip rows bleed to the screen edge and scroll sideways on narrow screens. */
+    .chip-row {
+      display: flex;
+      gap: 8px;
+      margin: 0 calc(var(--widget-padding-x) * -1);
+      padding: 2px 0 2px var(--widget-padding-x);
+      overflow-x: auto;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* Safari ignores padding-right at the end of a scrolling flex row; a spacer keeps the edge gap. */
+    .chip-row::after {
+      flex: 0 0 calc(var(--widget-padding-x) - 8px);
       content: "";
     }
 
-    .event-list-shell {
-      margin-bottom: 22px;
-      overflow: hidden;
+    .chip-row::-webkit-scrollbar {
+      display: none;
+    }
+
+    .chip-row+.chip-row {
+      margin-top: 6px;
+    }
+
+    .chip {
+      display: inline-flex;
+      flex: 0 0 auto;
+      align-items: center;
+      gap: 6px;
+      min-height: 40px;
+      padding: 0 14px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--white);
+      color: var(--navy);
+      font-size: 15px;
+      font-weight: 600;
+      line-height: 1;
+      white-space: nowrap;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .chip-count {
+      color: var(--muted);
+      font-weight: 400;
+      font-variant-numeric: tabular-nums;
+    }
+
+    @media (hover: hover) {
+      .chip:hover {
+        border-color: var(--navy);
+      }
+    }
+
+    .chip:focus-visible {
+      outline: 3px solid var(--yellow);
+      outline-offset: 1px;
+    }
+
+    .chip[aria-pressed="true"] {
+      border-color: var(--navy);
+      background: var(--navy);
+      color: var(--white);
+    }
+
+    .chip[aria-pressed="true"] .chip-count {
+      color: rgba(255, 255, 255, 0.75);
+    }
+
+    .chip:disabled {
+      border-color: var(--border);
+      background: var(--white);
+      color: #BDBDBD;
+      cursor: default;
+    }
+
+    .chip:disabled .chip-count {
+      color: #BDBDBD;
+    }
+
+    .chip--city,
+    .chip--city[aria-pressed="true"] {
+      border-color: var(--navy);
+      background: var(--yellow);
+      color: #111;
+    }
+
+    .chip--city .chip-count,
+    .chip--city[aria-pressed="true"] .chip-count {
+      color: #111;
+    }
+
+    .chip-dot {
+      width: 10px;
+      height: 10px;
+      border: 2px solid var(--navy);
+      border-radius: 50%;
+      background: var(--yellow);
+    }
+
+    .chip-clear {
+      margin-left: 2px;
+      font-size: 18px;
+      font-weight: 400;
+      line-height: 1;
+    }
+
+    .chip[hidden] {
+      display: none;
+    }
+
+    /* ---------- list ---------- */
+
+    .list-scroll-wrap {
+      position: relative;
+    }
+
+    .event-groups {
+      padding-bottom: 4px;
+    }
+
+    .month-group+.month-group {
+      margin-top: 6px;
+    }
+
+    .month-heading {
+      position: sticky;
+      top: var(--filter-bar-height);
+      z-index: 2;
+      margin: 0;
+      padding: 14px 0 8px;
+      background: var(--white);
+      color: var(--navy);
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+
+    .event-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
     }
 
     .event-item {
       position: relative;
-      min-height: 58px;
-      margin: 0;
-      padding: 0 0 20px 44px;
+      padding: 0 0 18px 34px;
     }
 
+    /* timeline line */
+    .event-item::after {
+      position: absolute;
+      top: 12px;
+      bottom: 0;
+      left: 9px;
+      width: 1px;
+      background: var(--timeline);
+      content: "";
+    }
+
+    .event-item:last-child::after {
+      display: none;
+    }
+
+    /* timeline dot: filled navy = on the map, hollow = online, grey = elsewhere / unknown */
     .event-item::before {
       position: absolute;
       z-index: 1;
       top: 4px;
-      left: 17px;
+      left: 2px;
       width: 15px;
       height: 15px;
       border-radius: 50%;
-      background: #bdbdbd;
+      background: #BDBDBD;
       content: "";
     }
 
-    .event-item-link {
+    .event-item.is-local::before {
+      background: var(--navy);
+    }
+
+    .event-item.is-online::before {
+      border: 2px solid var(--navy);
+      background: var(--white);
+    }
+
+    .event-link {
       display: block;
       color: inherit;
       text-decoration: none;
+      border-radius: 2px;
+    }
+
+    .event-link:focus-visible {
+      outline: 3px solid var(--yellow);
+      outline-offset: 3px;
+    }
+
+    .event-meta {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 2px 8px;
+      margin-bottom: 2px;
+      font-size: 14px;
+    }
+
+    .event-date {
+      color: #111;
+      font-weight: 700;
+    }
+
+    .event-place {
+      color: var(--muted);
+    }
+
+    .event-place.is-unknown {
+      color: var(--faint);
+      font-style: italic;
+    }
+
+    .event-category {
+      padding: 0 4px;
+      background: var(--yellow);
+      color: #111;
+      font-size: 11px;
+      font-weight: 700;
+      line-height: 1.5;
     }
 
     .event-title {
       display: block;
       color: var(--navy);
-      font-weight: 400;
-      line-height: 1.28;
-      text-decoration: none;
-    }
-
-    .event-item-link:hover .event-title,
-    .event-item-link:focus-visible .event-title {
-      text-decoration: underline;
-      text-underline-offset: 3px;
-    }
-
-    .event-date {
-      display: inline;
-      margin: 0 4px 2px 0;
-      color: #111;
-      font-size: 14px;
-      font-weight: 700;
-    }
-
-    .event-category {
-      display: inline-block;
-      margin-bottom: 2px;
-      padding: 0 3px;
-      background: var(--yellow);
-      color: #111;
-      font-size: 11px;
-      font-weight: 700;
-      line-height: 1.45;
-      vertical-align: 1px;
-    }
-
-    .event-location {
-      margin-top: 4px;
-      color: #aaa;
-      font-size: 11px;
-      line-height: 1.2;
-    }
-
-    .all-events-button {
-      display: inline-block;
-      margin-top: 4px;
-      padding: 9px 16px;
-      background: var(--yellow);
-      color: #111;
-      font-size: 17px;
-      font-weight: 700;
       line-height: 1.3;
-      text-decoration: none;
     }
 
-    .all-events-button:hover,
-    .all-events-button:focus-visible {
-      background: #d9ad00;
-      text-decoration: none;
+    @media (hover: hover) {
+      .event-link:hover .event-title {
+        text-decoration: underline;
+        text-underline-offset: 3px;
+      }
     }
 
-    .repo-link {
-      display: inline-block;
-      margin-top: 24px;
+    .empty-state {
+      padding: 20px 0;
       color: var(--muted);
-      font-size: 13px;
-      font-weight: 600;
-      text-decoration: none;
     }
 
-    .repo-link:hover,
-    .repo-link:focus-visible {
-      color: var(--navy);
-      text-decoration: underline;
-      text-underline-offset: 3px;
+    .empty-state p {
+      margin: 0 0 12px;
     }
 
-    .event-card {
-      position: fixed;
-      z-index: 10;
-      width: min(var(--popup-width), calc(100vw - (var(--widget-padding-x) * 2)));
-      padding: 14px 16px 15px;
-      border: 1px solid var(--border);
-      background: var(--white);
-      box-shadow: 0 12px 34px rgba(27, 39, 68, 0.14);
-      color: var(--navy);
-    }
-
-    .event-card h3 {
-      margin: 0 0 6px;
-      font-size: 17px;
-      line-height: 1.25;
-      font-weight: 700;
-    }
-
-    .event-card .card-date,
-    .event-card .card-location {
-      margin: 0 0 4px;
-      color: var(--muted);
-      font-weight: 400;
-    }
-
-    .event-card:hover {
-      display: block;
-    }
-
-    .event-card .card-event {
-      display: block;
-      color: inherit;
-      text-decoration: none;
-    }
-
-    .event-card .card-event:hover h3,
-    .event-card .card-event:focus-visible h3 {
-      text-decoration: underline;
-      text-underline-offset: 3px;
-    }
-
-    .event-card .card-event+.card-event {
-      margin-top: 12px;
-      padding-top: 12px;
-      border-top: 1px solid var(--border);
-    }
-
-    .widget.is-page {
-      --widget-padding-x: 24px;
-      --widget-padding-y: 28px;
-      max-width: var(--widget-page-max-width);
-      padding: var(--widget-padding-y) var(--widget-padding-x) 24px;
-      overflow-x: auto;
-    }
-
-    @media (min-width: 721px) {
-      .widget.is-page .columns {
-        grid-template-columns: minmax(300px, 1fr) minmax(380px, 1.4fr);
-        gap: var(--widget-page-gap);
-        min-width: 680px;
-      }
-
-      .widget.is-page .map-shell {
-        width: min(100%, var(--map-page-width));
-        margin-left: 0;
-      }
-    }
-
-    @media (min-width: 1200px) {
-      /* Two timeline columns: the first fills top to bottom, the second continues chronologically. */
-      .widget.is-page .event-list {
-        column-count: 2;
-        column-gap: 32px;
-        column-fill: auto;
-      }
-
-      .widget.is-page .event-item {
-        break-inside: avoid;
-      }
-
-      .widget.is-page .section-label {
-        margin-bottom: 16px;
-      }
-    }
-    .range-filter {
+    .empty-actions {
       display: flex;
-      gap: 6px;
-      margin: 0 0 18px;
+      flex-wrap: wrap;
+      gap: 8px;
     }
 
-    .range-button {
-      padding: 5px 12px;
-      border: 1px solid var(--border);
+    .text-button {
+      min-height: 40px;
+      padding: 0 14px;
+      border: 1px solid var(--navy);
       border-radius: 999px;
       background: var(--white);
       color: var(--navy);
-      font: inherit;
-      font-size: 14px;
+      font-size: 15px;
       font-weight: 600;
       cursor: pointer;
     }
 
-    .range-button:hover,
-    .range-button:focus-visible {
-      border-color: var(--navy);
+    .text-button:focus-visible {
+      outline: 3px solid var(--yellow);
+      outline-offset: 1px;
     }
 
-    .range-button.is-active {
+    /* Main exit to gi.de: full-width thumb target on narrow screens, inline on wide ones. */
+    .all-events-button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      align-self: stretch;
+      min-height: 48px;
+      margin-top: 16px;
+      padding: 0 20px;
+      background: var(--yellow);
+      color: #111;
+      font-size: 17px;
+      font-weight: 700;
+      line-height: 1.2;
+      text-decoration: none;
+    }
+
+    .all-events-button:focus-visible {
+      outline: 3px solid var(--navy);
+      outline-offset: 2px;
+    }
+
+    .all-events-button:hover,
+    .all-events-button:focus-visible {
+      background: var(--yellow-hover);
+    }
+
+    .to-map {
+      position: fixed;
+      right: calc(16px + env(safe-area-inset-right, 0px));
+      bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+      z-index: 6;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 44px;
+      padding: 0 16px;
+      border: 0;
+      border-radius: 999px;
       background: var(--navy);
-      border-color: var(--navy);
       color: var(--white);
+      font-size: 15px;
+      font-weight: 700;
+      box-shadow: 0 6px 18px rgba(27, 39, 68, 0.25);
+      cursor: pointer;
     }
 
-    .disclaimer { font-size: 0.8rem; color: #6b7280; margin: 0.75rem 0 0; }
-    .disclaimer a { color: inherit; }
+    .to-map[hidden] {
+      display: none;
+    }
+
+    .to-map:focus-visible {
+      outline: 3px solid var(--yellow);
+      outline-offset: 2px;
+    }
+
+    /* Bottom room so the floating "Karte" button never covers the last lines. */
+    .disclaimer {
+      margin: 24px 0 0;
+      padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .disclaimer a {
+      color: inherit;
+    }
+
+    /* ---------- layout: side by side (wide container) ---------- */
+
+    @container widget (min-width: 720px) {
+      .layout {
+        grid-template-columns: minmax(280px, 2fr) minmax(0, 3fr);
+        gap: 40px;
+        align-items: stretch;
+      }
+
+      .map-shell {
+        max-width: none;
+      }
+
+      /* The list column takes the height of the map column and scrolls inside. */
+      .list-panel {
+        contain: size;
+        min-height: 560px;
+      }
+
+      .filter-bar {
+        position: static;
+        margin: 0;
+        padding: 0 0 10px;
+      }
+
+      .chip-row {
+        flex-wrap: wrap;
+        gap: 6px;
+        margin: 0;
+        padding: 0;
+        overflow: visible;
+      }
+
+      .chip-row::after {
+        display: none;
+      }
+
+      .chip-row+.chip-row {
+        margin-top: 8px;
+      }
+
+      /* Mouse precision: compact chips and buttons on wide layouts. */
+      .chip,
+      .text-button {
+        min-height: 34px;
+        padding: 0 12px;
+        font-size: 14px;
+      }
+
+      .all-events-button {
+        align-self: flex-start;
+        min-height: 44px;
+      }
+
+      .disclaimer {
+        padding-bottom: 0;
+      }
+
+      .list-scroll-wrap {
+        flex: 1 1 0;
+        min-height: 0;
+      }
+
+      .list-scroll {
+        position: absolute;
+        inset: 0;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        padding-right: 8px;
+      }
+
+      .month-heading {
+        top: 0;
+      }
+
+      /* Fade at the bottom while more events are below. */
+      .list-scroll-wrap::after {
+        position: absolute;
+        right: 8px;
+        bottom: 0;
+        left: 0;
+        height: 48px;
+        background: linear-gradient(rgba(255, 255, 255, 0), var(--white));
+        pointer-events: none;
+        content: "";
+        transition: opacity 150ms ease;
+      }
+
+      .list-scroll-wrap.is-at-end::after {
+        opacity: 0;
+      }
+
+      .to-map {
+        display: none;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+
+      .marker-dot,
+      .list-scroll-wrap::after {
+        transition: none;
+      }
+    }
   </style>
 </head>
 
 <body>
-  <main class="widget is-embed" id="eventWidget" aria-label=" GI-Veranstaltungen (Widget-Prototyp)">
-    <div class="range-filter" role="group" aria-label="Zeitraum">
-      <button type="button" class="range-button" data-months="2">2 Monate</button>
-      <button type="button" class="range-button" data-months="4">4 Monate</button>
-      <button type="button" class="range-button" data-months="6">6 Monate</button>
-    </div>
-    <div class="columns">
-      <section aria-labelledby="local-events-label">
-        <h2 class="section-label" id="local-events-label">Vor Ort</h2>
+  <main class="widget" id="eventWidget" aria-label="GI-Veranstaltungen (inoffizieller Widget-Prototyp)">
+    <div class="layout" id="layout">
+      <section class="map-panel" id="mapPanel" aria-label="Karte der Vor-Ort-Veranstaltungen">
         <div class="map-shell" id="mapShell">
-          <svg class="map-svg" id="mapSvg" viewBox="0 0 1000 1000" role="img"
-            aria-label="Deutschlandkarte mit GI-Veranstaltungen" xmlns="http://www.w3.org/2000/svg">
+          <svg class="map-svg" id="mapSvg" viewBox="170 40 690 930" role="group"
+            aria-label="Deutschlandkarte: Orte mit GI-Veranstaltungen" xmlns="http://www.w3.org/2000/svg">
             <g class="states" aria-hidden="true">
               <path id="DESH" data-name="Schleswig-Holstein"
                 d="M461.4,259.2 L542.8,171.6 L543.4,137.1 L471.4,108 L470.1,59.5 L424.5,78.7 L370.7,62.1 L373.9,133.1 L390.2,179.5 L341.9,240 L328.6,213 L269.1,219.7 L260.5,235.6 L461.4,259.2 Z">
@@ -438,76 +750,407 @@
                 <title>Bayern</title>
               </path>
             </g>
-            <g id="markerLayer" aria-label="Veranstaltungsorte"></g>
+            <g id="markerLayer"></g>
           </svg>
+          <div class="map-tooltip" id="mapTooltip" hidden></div>
         </div>
-        <p class="status" id="mapStatus">Lade Veranstaltungen …</p>
       </section>
 
-      <section aria-labelledby="remote-events-label">
-        <h2 class="section-label" id="remote-events-label">Online &amp; International</h2>
-        <div class="event-list-shell" id="eventListShell">
-          <ul class="event-list" id="eventList" aria-live="polite"></ul>
+      <section class="list-panel" id="listPanel" aria-labelledby="listHeading">
+        <h2 class="visually-hidden" id="listHeading">Veranstaltungen</h2>
+        <div class="filter-bar" id="filterBar">
+          <div class="chip-row" id="placeChips" role="group" aria-label="Ort filtern">
+            <button type="button" class="chip chip--city" id="cityChip" aria-pressed="true" hidden>
+              <span class="chip-dot" aria-hidden="true"></span>
+              <span class="chip-label"></span>
+              <span class="chip-count"></span>
+              <span class="chip-clear" aria-hidden="true">×</span>
+            </button>
+          </div>
+          <div class="chip-row" id="monthChips" role="group" aria-label="Monat filtern"></div>
         </div>
-        <a href="https://gi.de/aktuelles/veranstaltungen" class="all-events-button" target="_blank" rel="noopener noreferrer">Alle Veranstaltungen</a>
+        <!-- Result count for screen readers only; sighted users see the list itself. -->
+        <p class="visually-hidden" id="resultStatus" role="status"></p>
+        <div class="list-scroll-wrap" id="listScrollWrap">
+          <div class="list-scroll" id="listScroll">
+            <div class="event-groups" id="eventGroups">
+              <p class="empty-state">Lade Veranstaltungen …</p>
+            </div>
+          </div>
+        </div>
+        <a href="https://gi.de/aktuelles/veranstaltungen" class="all-events-button" target="_blank"
+          rel="noopener noreferrer">Alle Veranstaltungen auf gi.de</a>
       </section>
     </div>
-    <p class="disclaimer">Inoffizielles Widget-Prototyp
+    <p class="disclaimer">Inoffizieller Widget-Prototyp ·
       Daten: <a href="https://gi.de/aktuelles/veranstaltungen" target="_blank" rel="noopener noreferrer">gi.de/aktuelles/veranstaltungen</a>
-      · <a class="repo-link" href="https://github.com/marcoheinisch/gi-eventmap-prototype" target="_blank" rel="noopener noreferrer">GitHub Repository</a>
+      · <a href="https://github.com/marcoheinisch/gi-eventmap-prototype" target="_blank" rel="noopener noreferrer">GitHub-Repository</a>
     </p>
+    <button type="button" class="to-map" id="toMap" hidden>
+      <span aria-hidden="true">↑</span> Karte
+    </button>
   </main>
 
   <script>
     const CONFIG = Object.freeze({
       eventsUrl: 'events.json',
-      layoutParam: 'layout',
-      monthsParam: 'months',
-      monthOptions: [2, 4, 6],
-      defaultMonths: 6,
-      layouts: {
-        embed: 'is-embed',
-        page: 'is-page',
-      },
-      clusterThreshold: 14,
-      listMinimumHeight: 430,
-      listBottomReserve: 140,
+      params: { place: 'ort', city: 'stadt', month: 'monat' },
+      places: [
+        { id: 'all', label: 'Alle', param: null },
+        { id: 'local', label: 'Vor Ort', param: 'vor-ort' },
+        { id: 'online', label: 'Online', param: 'online' },
+        { id: 'intl', label: 'International', param: 'international' },
+      ],
+      // Must match the <svg viewBox>: the box around Germany in the projected coordinates.
+      viewBox: { x: 170, y: 40, width: 690, height: 930 },
+      // All marker sizes in screen pixels; converted to SVG units at render time.
       marker: {
-        singleRadius: 18,
-        clusterBaseRadius: 20,
-        clusterGrowth: 1.5,
-        clusterMaxRadius: 32,
-        ringOffset: 6,
-        ringStrokeWidth: 4,
-        defaultStrokeWidth: 2.5,
-        hoverStrokeWidth: 3.5,
-        hoverRadiusIncrease: 2,
+        singleRadius: 8,
+        clusterRadius: 11,
+        clusterGrowth: 0.8,
+        clusterMaxRadius: 16,
+        hitRadius: 22,
+        ringOffset: 5,
+        countFontSize: 12,
       },
-      popup: {
-        closeDelay: 120,
-        gap: 18,
-        edgeClamp: 8,
-      },
+      // Dots closer than this (screen px) merge; touch needs more room than a mouse.
+      clusterDistance: { coarse: 26, fine: 18 },
     });
-    const NAVY = '#1B2744';
-    const YELLOW = '#F5C400';
-    const WHITE = '#fff';
+
     const SVG_NS = 'http://www.w3.org/2000/svg';
+    const MONTHS_SHORT = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
+    const WEEKDAYS = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
+    const monthLongFormat = new Intl.DateTimeFormat('de-DE', { month: 'long', year: 'numeric' });
 
-    const eventWidget = document.getElementById('eventWidget');
-    const markerLayer = document.getElementById('markerLayer');
-    const eventList = document.getElementById('eventList');
-    const eventListShell = document.getElementById('eventListShell');
-    const mapShell = document.getElementById('mapShell');
-    const mapSvg = document.getElementById('mapSvg');
-    const mapStatus = document.getElementById('mapStatus');
+    const el = {
+      widget: document.getElementById('eventWidget'),
+      layout: document.getElementById('layout'),
+      mapPanel: document.getElementById('mapPanel'),
+      mapShell: document.getElementById('mapShell'),
+      mapSvg: document.getElementById('mapSvg'),
+      markerLayer: document.getElementById('markerLayer'),
+      mapTooltip: document.getElementById('mapTooltip'),
+      listPanel: document.getElementById('listPanel'),
+      filterBar: document.getElementById('filterBar'),
+      placeChips: document.getElementById('placeChips'),
+      cityChip: document.getElementById('cityChip'),
+      monthChips: document.getElementById('monthChips'),
+      resultStatus: document.getElementById('resultStatus'),
+      listScrollWrap: document.getElementById('listScrollWrap'),
+      listScroll: document.getElementById('listScroll'),
+      eventGroups: document.getElementById('eventGroups'),
+      toMap: document.getElementById('toMap'),
+    };
 
-    let selectedMarker = null;
-    let openCard = null;
-    let closeCardTimer = null;
-    let allEvents = [];
-    let rangeMonths = CONFIG.defaultMonths;
-    const rangeButtons = Array.from(document.querySelectorAll('.range-button'));
+    const hoverQuery = window.matchMedia('(hover: hover)');
+    const coarseQuery = window.matchMedia('(pointer: coarse)');
+    const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+    // place: 'all' | 'local' | 'online' | 'intl'; cities: Set of city names from a map dot, or null.
+    const state = { place: 'all', cities: null, month: 'all', placeBeforeCity: 'all' };
+    let events = [];
+    let months = [];
+    let placeButtons = new Map();
+    let monthButtons = new Map();
+
+    // ---------- data ----------
+
+    function parseIsoDate(value) {
+      if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+      const [year, month, day] = value.split('-').map(Number);
+      return new Date(year, month - 1, day);
+    }
+
+    function startOfToday() {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return today;
+    }
+
+    function monthKeyOf(date) {
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    }
+
+    function hasCoords(event) {
+      return Number.isFinite(event.lat) && Number.isFinite(event.lng);
+    }
+
+    function isOnMap(event) {
+      return !event.online && hasCoords(event);
+    }
+
+    // The scraper geocodes only inside Germany, so a city without coordinates is abroad.
+    // Events with neither a city nor the online flag are in person at an unknown place.
+    function placeOf(event) {
+      if (event.online) return 'online';
+      if (hasCoords(event)) return 'local';
+      if (event.city) return 'intl';
+      return 'local';
+    }
+
+    function prepareEvents(raw) {
+      const today = startOfToday();
+      const currentMonth = monthKeyOf(today);
+      return raw
+        .map((event) => {
+          const start = parseIsoDate(event.dateStart);
+          const end = parseIsoDate(event.dateEnd) || start;
+          if (!start || end < today) return null;
+          const month = monthKeyOf(start) < currentMonth ? currentMonth : monthKeyOf(start);
+          return { ...event, start, end, ongoing: start < today, place: placeOf(event), month };
+        })
+        .filter(Boolean)
+        .sort(compareEvents);
+    }
+
+    function compareEvents(a, b) {
+      if (a.start - b.start) return a.start - b.start;
+      return String(a.title || '').localeCompare(String(b.title || ''), 'de');
+    }
+
+    // ---------- filtering ----------
+
+    function matchesPlace(event, place = state.place, cities = state.cities) {
+      if (cities) return isOnMap(event) && cities.has(event.city);
+      return place === 'all' || event.place === place;
+    }
+
+    function matchesMonth(event, month = state.month) {
+      return month === 'all' || event.month === month;
+    }
+
+    function visibleEvents() {
+      return events.filter((event) => matchesPlace(event) && matchesMonth(event));
+    }
+
+    // ---------- labels ----------
+
+    function pad(n) {
+      return String(n).padStart(2, '0');
+    }
+
+    function dayMonth(date) {
+      return `${pad(date.getDate())}.${pad(date.getMonth() + 1)}.`;
+    }
+
+    function formatDate(event) {
+      const { start, end } = event;
+      const endYear = end.getFullYear() !== start.getFullYear() ? end.getFullYear() : '';
+      if (event.ongoing) return `läuft bis ${dayMonth(end)}${endYear}`;
+      if (end.getTime() === start.getTime()) return `${WEEKDAYS[start.getDay()]}, ${dayMonth(start)}`;
+      if (start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear()) {
+        return `${pad(start.getDate())}.–${dayMonth(end)}`;
+      }
+      return `${dayMonth(start)}–${dayMonth(end)}${endYear}`;
+    }
+
+    function placeLabel(event) {
+      if (event.online) return 'Online';
+      if (event.city) return event.city;
+      return 'Ort: siehe Veranstaltung';
+    }
+
+    function monthDate(key) {
+      const [year, month] = key.split('-').map(Number);
+      return new Date(year, month - 1, 1);
+    }
+
+    // No year: gi.de lists about six months ahead, so a month name is never ambiguous.
+    // The year stays in the list's month headings and in the chip for screen readers.
+    function monthShortLabel(key) {
+      return MONTHS_SHORT[monthDate(key).getMonth()];
+    }
+
+    function monthLongLabel(key) {
+      return monthLongFormat.format(monthDate(key));
+    }
+
+    // "Frankfurt" and "Frankfurt am Main" in one dot read as one place.
+    function citiesLabel(cities) {
+      const names = [...cities].sort((a, b) => a.localeCompare(b, 'de'));
+      const distinct = names.filter((name) => !names.some((other) => other !== name && other.startsWith(`${name} `)));
+      return distinct.length > 2 ? `${distinct.slice(0, 2).join(' · ')} +${distinct.length - 2}` : distinct.join(' · ');
+    }
+
+    function countLabel(n) {
+      return `${n} ${n === 1 ? 'Veranstaltung' : 'Veranstaltungen'}`;
+    }
+
+    // ---------- chips ----------
+
+    function makeChip(label, onClick) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'chip';
+      const text = document.createElement('span');
+      text.className = 'chip-label';
+      text.textContent = label;
+      const count = document.createElement('span');
+      count.className = 'chip-count';
+      button.append(text, count);
+      button.addEventListener('click', onClick);
+      return button;
+    }
+
+    function buildChips() {
+      placeButtons = new Map();
+      for (const place of CONFIG.places) {
+        const button = makeChip(place.label, () => setPlace(place.id));
+        placeButtons.set(place.id, button);
+        el.placeChips.appendChild(button);
+      }
+
+      monthButtons = new Map();
+      const allButton = makeChip('Alle Monate', () => setMonth('all'));
+      monthButtons.set('all', allButton);
+      el.monthChips.appendChild(allButton);
+      for (const key of months) {
+        const button = makeChip(monthShortLabel(key), () => setMonth(key));
+        button.title = monthLongLabel(key);
+        const year = document.createElement('span');
+        year.className = 'visually-hidden';
+        year.textContent = ` ${monthDate(key).getFullYear()}`;
+        button.querySelector('.chip-label').after(year);
+        monthButtons.set(key, button);
+        el.monthChips.appendChild(button);
+      }
+    }
+
+    function updateChip(button, count, pressed) {
+      button.querySelector('.chip-count').textContent = String(count);
+      button.setAttribute('aria-pressed', String(pressed));
+      // Never disable the active chip; an empty selection must stay reachable to leave it.
+      button.disabled = count === 0 && !pressed;
+    }
+
+    function renderChips() {
+      const inMonth = events.filter((event) => matchesMonth(event));
+      for (const place of CONFIG.places) {
+        const button = placeButtons.get(place.id);
+        const count = inMonth.filter((event) => matchesPlace(event, place.id, null)).length;
+        updateChip(button, count, !state.cities && state.place === place.id);
+        if (place.id === 'intl') button.hidden = !events.some((event) => event.place === 'intl');
+      }
+
+      el.cityChip.hidden = !state.cities;
+      if (state.cities) {
+        const label = citiesLabel(state.cities);
+        const count = inMonth.filter((event) => matchesPlace(event)).length;
+        el.cityChip.querySelector('.chip-label').textContent = label;
+        el.cityChip.querySelector('.chip-count').textContent = String(count);
+        el.cityChip.setAttribute('aria-label', `Filter ${label} entfernen`);
+      }
+
+      const inPlace = events.filter((event) => matchesPlace(event));
+      for (const [key, button] of monthButtons) {
+        const count = inPlace.filter((event) => matchesMonth(event, key)).length;
+        updateChip(button, count, state.month === key);
+      }
+    }
+
+    function scrollChipIntoView(button) {
+      if (!button || button.hidden) return;
+      const row = button.parentElement;
+      if (row.scrollWidth <= row.clientWidth) return;
+      const left = button.offsetLeft - row.offsetLeft;
+      if (left < row.scrollLeft || left + button.offsetWidth > row.scrollLeft + row.clientWidth) {
+        row.scrollTo({ left: Math.max(0, left - 16), behavior: reducedMotionQuery.matches ? 'auto' : 'smooth' });
+      }
+    }
+
+    // ---------- state changes ----------
+
+    function setPlace(place) {
+      state.cities = null;
+      state.place = place;
+      update();
+    }
+
+    function setMonth(month) {
+      state.month = month;
+      update();
+      scrollChipIntoView(monthButtons.get(month));
+    }
+
+    function selectCities(cities) {
+      if (state.cities && cities.length === state.cities.size && cities.every((city) => state.cities.has(city))) {
+        clearCities();
+        return;
+      }
+      if (!state.cities) state.placeBeforeCity = state.place;
+      state.cities = new Set(cities);
+      update();
+      el.placeChips.scrollTo({ left: 0 });
+      if (!isSideBySide()) {
+        el.listPanel.scrollIntoView({ behavior: reducedMotionQuery.matches ? 'auto' : 'smooth', block: 'start' });
+      }
+    }
+
+    function clearCities() {
+      if (!state.cities) return;
+      state.cities = null;
+      state.place = state.placeBeforeCity;
+      update();
+    }
+
+    function resetFilters() {
+      state.cities = null;
+      state.place = 'all';
+      state.month = 'all';
+      update();
+    }
+
+    function update() {
+      render();
+      el.listScroll.scrollTop = 0;
+      if (!isSideBySide() && el.listPanel.getBoundingClientRect().top < 0) {
+        // Keep the top of the new result visible below the sticky chips.
+        el.listPanel.scrollIntoView({ block: 'start' });
+      }
+      syncUrl();
+    }
+
+    function render() {
+      const visible = visibleEvents();
+      renderChips();
+      renderMap();
+      renderList(visible);
+      renderStatus(visible);
+      updateListFade();
+    }
+
+    // ---------- URL ----------
+
+    function readUrl() {
+      const params = new URLSearchParams(window.location.search);
+      const place = CONFIG.places.find((p) => p.param && p.param === params.get(CONFIG.params.place));
+      state.place = place ? place.id : 'all';
+
+      const month = params.get(CONFIG.params.month);
+      state.month = months.includes(month) ? month : 'all';
+
+      const known = new Set(events.filter(isOnMap).map((event) => event.city));
+      const cities = (params.get(CONFIG.params.city) || '').split(',').map((c) => c.trim()).filter((c) => known.has(c));
+      state.placeBeforeCity = state.place;
+      state.cities = cities.length ? new Set(cities) : null;
+    }
+
+    function syncUrl() {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        for (const key of Object.values(CONFIG.params)) params.delete(key);
+        const place = CONFIG.places.find((p) => p.id === state.place);
+        if (state.cities) params.set(CONFIG.params.city, [...state.cities].join(','));
+        else if (place && place.param) params.set(CONFIG.params.place, place.param);
+        if (state.month !== 'all') params.set(CONFIG.params.month, state.month);
+        const query = params.toString();
+        window.history.replaceState(null, '', `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`);
+      } catch (error) {
+        // Sandboxed embeds may forbid history access; the widget works without it.
+      }
+    }
+
+    // ---------- map ----------
 
     function project(lat, lng) {
       const x = lng * 71.26 - 236.9;
@@ -516,414 +1159,323 @@
       return { x, y };
     }
 
-    function formatDateRange(event) {
-      const start = parseIsoDate(event.dateStart);
-      const end = parseIsoDate(event.dateEnd);
-      if (!start) return '';
-      const fullFmt = new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
-      if (!end || event.dateEnd === event.dateStart) return fullFmt.format(start);
-      const shortFmt = new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit' });
-      return `${shortFmt.format(start)} - ${fullFmt.format(end)}`;
+    // Screen pixels per SVG unit.
+    function mapScale() {
+      const width = el.mapSvg.getBoundingClientRect().width;
+      return width ? width / CONFIG.viewBox.width : 0.6;
     }
 
-    function parseIsoDate(value) {
-      if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
-      const [year, month, day] = value.split('-').map(Number);
-      return new Date(year, month - 1, day);
+    function clusterEvents(mapEvents, scale) {
+      const distance = (coarseQuery.matches ? CONFIG.clusterDistance.coarse : CONFIG.clusterDistance.fine) / scale;
+      const clusters = [];
+      for (const event of mapEvents) {
+        const point = project(event.lat, event.lng);
+        const match = clusters.find((cluster) => Math.hypot(point.x - cluster.x, point.y - cluster.y) <= distance);
+        if (match) {
+          match.events.push(event);
+          match.points.push(point);
+          match.x = match.points.reduce((sum, p) => sum + p.x, 0) / match.points.length;
+          match.y = match.points.reduce((sum, p) => sum + p.y, 0) / match.points.length;
+        } else {
+          clusters.push({ x: point.x, y: point.y, events: [event], points: [point] });
+        }
+      }
+      for (const cluster of clusters) {
+        cluster.cities = [...new Set(cluster.events.map((event) => event.city))];
+        cluster.key = [...cluster.cities].sort().join('|');
+        cluster.label = citiesLabel(cluster.cities);
+      }
+      return clusters;
     }
 
-    function isGermanPhysical(event) {
-      return !event.online && Number.isFinite(event.lat) && Number.isFinite(event.lng);
+    function markerRadius(count) {
+      const m = CONFIG.marker;
+      if (count === 1) return m.singleRadius;
+      return Math.min(m.clusterMaxRadius, m.clusterRadius + (count - 2) * m.clusterGrowth);
     }
 
-    function isRemoteOrInternational(event) {
-      return event.online || !isGermanPhysical(event);
+    function svgCircle(className, cx, cy, r) {
+      const circle = document.createElementNS(SVG_NS, 'circle');
+      circle.setAttribute('class', className);
+      circle.setAttribute('cx', cx);
+      circle.setAttribute('cy', cy);
+      circle.setAttribute('r', r);
+      return circle;
     }
 
-    function escapeText(value) {
-      return String(value ?? '');
+    function renderMap() {
+      const focusedKey = document.activeElement && document.activeElement.closest
+        ? document.activeElement.closest('.marker')?.dataset.key
+        : null;
+      hideTooltip();
+      while (el.markerLayer.firstChild) el.markerLayer.removeChild(el.markerLayer.firstChild);
+
+      const scale = mapScale();
+      const clusters = clusterEvents(events.filter((event) => isOnMap(event) && matchesMonth(event)), scale);
+      const muted = !state.cities && (state.place === 'online' || state.place === 'intl');
+      const isSelected = (cluster) => Boolean(state.cities) && cluster.cities.some((city) => state.cities.has(city));
+      // Selected dots last so they paint on top.
+      clusters.sort((a, b) => Number(isSelected(a)) - Number(isSelected(b)));
+
+      for (const cluster of clusters) {
+        const count = cluster.events.length;
+        const r = markerRadius(count) / scale;
+        const group = document.createElementNS(SVG_NS, 'g');
+        const selected = isSelected(cluster);
+        group.setAttribute('class', `marker${selected ? ' is-selected' : ''}${muted ? ' is-muted' : ''}`);
+        group.setAttribute('tabindex', '0');
+        group.setAttribute('role', 'button');
+        group.setAttribute('aria-pressed', String(selected));
+        group.setAttribute('aria-label', `${cluster.label}: ${countLabel(count)}`);
+        group.dataset.key = cluster.key;
+
+        group.append(
+          svgCircle('marker-hit', cluster.x, cluster.y, CONFIG.marker.hitRadius / scale),
+          svgCircle('marker-ring', cluster.x, cluster.y, r + CONFIG.marker.ringOffset / scale),
+          svgCircle('marker-dot', cluster.x, cluster.y, r),
+        );
+        if (count > 1) {
+          const text = document.createElementNS(SVG_NS, 'text');
+          text.setAttribute('class', 'marker-count');
+          text.setAttribute('x', cluster.x);
+          text.setAttribute('y', cluster.y);
+          text.setAttribute('dy', '0.35em');
+          text.setAttribute('text-anchor', 'middle');
+          text.setAttribute('font-size', CONFIG.marker.countFontSize / scale);
+          text.textContent = String(count);
+          group.appendChild(text);
+        }
+
+        group.addEventListener('click', (event) => {
+          event.stopPropagation();
+          selectCities(cluster.cities);
+        });
+        group.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            selectCities(cluster.cities);
+          }
+        });
+        group.addEventListener('mouseenter', () => {
+          if (hoverQuery.matches) showTooltip(cluster, r);
+        });
+        group.addEventListener('mouseleave', hideTooltip);
+        // Keyboard focus only: a tap also focuses the dot, and the tooltip would stay behind.
+        group.addEventListener('focus', () => {
+          if (group.matches(':focus-visible')) showTooltip(cluster, r);
+        });
+        group.addEventListener('blur', hideTooltip);
+
+        el.markerLayer.appendChild(group);
+        if (cluster.key === focusedKey) group.focus({ preventScroll: true });
+      }
+
     }
 
-    function clearNode(node) {
-      while (node.firstChild) node.removeChild(node.firstChild);
+    function showTooltip(cluster, r) {
+      const scale = mapScale();
+      el.mapTooltip.textContent = `${cluster.label} · ${countLabel(cluster.events.length)}`;
+      el.mapTooltip.style.left = `${(cluster.x - CONFIG.viewBox.x) * scale}px`;
+      el.mapTooltip.style.top = `${(cluster.y - CONFIG.viewBox.y - r) * scale - 8}px`;
+      el.mapTooltip.hidden = false;
     }
 
-    function initialMonths() {
-      const requested = Number(new URLSearchParams(window.location.search).get(CONFIG.monthsParam));
-      return CONFIG.monthOptions.includes(requested) ? requested : CONFIG.defaultMonths;
+    function hideTooltip() {
+      el.mapTooltip.hidden = true;
     }
 
-    function applyLayoutMode() {
-      const params = new URLSearchParams(window.location.search);
-      const requestedLayout = params.get(CONFIG.layoutParam);
-      const layout = requestedLayout === 'page' ? 'page' : 'embed';
-      eventWidget.classList.remove(CONFIG.layouts.embed, CONFIG.layouts.page);
-      eventWidget.classList.add(CONFIG.layouts[layout]);
+    function hintMarker(event, on) {
+      if (!isOnMap(event)) return;
+      for (const marker of el.markerLayer.querySelectorAll('.marker')) {
+        if (marker.dataset.key.split('|').includes(event.city)) marker.classList.toggle('is-hinted', on);
+      }
     }
+
+    // ---------- list ----------
+
+    function renderList(visible) {
+      while (el.eventGroups.firstChild) el.eventGroups.removeChild(el.eventGroups.firstChild);
+      if (visible.length === 0) {
+        el.eventGroups.appendChild(emptyState());
+        return;
+      }
+
+      let list = null;
+      let currentMonth = null;
+      for (const event of visible) {
+        if (event.month !== currentMonth) {
+          currentMonth = event.month;
+          const group = document.createElement('section');
+          group.className = 'month-group';
+          const heading = document.createElement('h3');
+          heading.className = 'month-heading';
+          heading.textContent = monthLongLabel(currentMonth);
+          list = document.createElement('ul');
+          list.className = 'event-list';
+          group.append(heading, list);
+          el.eventGroups.appendChild(group);
+        }
+        list.appendChild(eventItem(event));
+      }
+    }
+
+    function eventItem(event) {
+      const item = document.createElement('li');
+      item.className = `event-item is-${isOnMap(event) ? 'local' : event.place}`;
+
+      const link = document.createElement('a');
+      link.className = 'event-link';
+      link.href = event.url;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+
+      const meta = document.createElement('span');
+      meta.className = 'event-meta';
+      const date = document.createElement('time');
+      date.className = 'event-date';
+      date.dateTime = event.dateStart;
+      date.textContent = formatDate(event);
+      const place = document.createElement('span');
+      place.className = `event-place${!event.online && !event.city ? ' is-unknown' : ''}`;
+      place.textContent = placeLabel(event);
+      meta.append(date, place);
+      if (event.category) {
+        const category = document.createElement('span');
+        category.className = 'event-category';
+        category.textContent = event.category;
+        meta.appendChild(category);
+      }
+
+      const title = document.createElement('span');
+      title.className = 'event-title';
+      title.textContent = event.title || '';
+
+      link.append(meta, title);
+      item.appendChild(link);
+
+      if (isOnMap(event)) {
+        link.addEventListener('mouseenter', () => hintMarker(event, true));
+        link.addEventListener('mouseleave', () => hintMarker(event, false));
+        link.addEventListener('focus', () => hintMarker(event, true));
+        link.addEventListener('blur', () => hintMarker(event, false));
+      }
+      return item;
+    }
+
+    function emptyState() {
+      const box = document.createElement('div');
+      box.className = 'empty-state';
+      const text = document.createElement('p');
+      const where = state.cities ? ` in ${citiesLabel(state.cities)}` : '';
+      const when = state.month !== 'all' ? ` im ${monthLongLabel(state.month)}` : '';
+      text.textContent = `Keine Veranstaltungen${where}${when}.`;
+      box.appendChild(text);
+
+      const actions = document.createElement('div');
+      actions.className = 'empty-actions';
+      const addAction = (label, onClick) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'text-button';
+        button.textContent = label;
+        button.addEventListener('click', onClick);
+        actions.appendChild(button);
+      };
+      if (state.month !== 'all') addAction('Alle Monate anzeigen', () => setMonth('all'));
+      if (state.cities || state.place !== 'all') addAction('Alle Orte anzeigen', () => setPlace('all'));
+      if (actions.childElementCount) box.appendChild(actions);
+      return box;
+    }
+
+    function renderStatus(visible) {
+      const parts = [countLabel(visible.length)];
+      if (state.cities) parts.push(citiesLabel(state.cities));
+      else if (state.place !== 'all') parts.push(CONFIG.places.find((p) => p.id === state.place).label);
+      if (state.month !== 'all') parts.push(monthLongLabel(state.month));
+      el.resultStatus.textContent = parts.join(' · ');
+    }
+
+    function updateListFade() {
+      const scroll = el.listScroll;
+      const atEnd = scroll.scrollHeight - scroll.scrollTop - scroll.clientHeight < 4;
+      el.listScrollWrap.classList.toggle('is-at-end', atEnd);
+    }
+
+    // ---------- layout helpers ----------
+
+    function isSideBySide() {
+      return window.getComputedStyle(el.layout).gridTemplateColumns.trim().split(/\s+/).length > 1;
+    }
+
+    function syncFilterBarHeight() {
+      const height = isSideBySide() ? 0 : el.filterBar.offsetHeight;
+      el.widget.style.setProperty('--filter-bar-height', `${height}px`);
+    }
+
+    // "Karte" button on narrow screens: shown once the map has scrolled out of view.
+    function watchMapVisibility() {
+      if (!('IntersectionObserver' in window)) return;
+      const observer = new IntersectionObserver(([entry]) => {
+        el.toMap.hidden = entry.isIntersecting || isSideBySide() || events.length === 0;
+      });
+      observer.observe(el.mapShell);
+    }
+
+    function setupLayoutObservers() {
+      let frame = 0;
+      const onResize = () => {
+        cancelAnimationFrame(frame);
+        frame = requestAnimationFrame(() => {
+          if (events.length) renderMap();
+          syncFilterBarHeight();
+          updateListFade();
+        });
+      };
+      if ('ResizeObserver' in window) {
+        new ResizeObserver(onResize).observe(el.mapShell);
+        new ResizeObserver(syncFilterBarHeight).observe(el.filterBar);
+      } else {
+        window.addEventListener('resize', onResize);
+      }
+      syncFilterBarHeight();
+    }
+
+    // ---------- wiring ----------
+
+    el.cityChip.addEventListener('click', clearCities);
+    el.listScroll.addEventListener('scroll', updateListFade, { passive: true });
+    el.mapSvg.addEventListener('click', () => clearCities());
+    el.widget.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && state.cities) clearCities();
+    });
+    el.toMap.addEventListener('click', () => {
+      el.mapPanel.scrollIntoView({ behavior: reducedMotionQuery.matches ? 'auto' : 'smooth', block: 'start' });
+    });
 
     async function loadEvents() {
       try {
         const response = await fetch(CONFIG.eventsUrl, { cache: 'no-store' });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const data = await response.json();
-        allEvents = Array.isArray(data) ? data : [];
+        events = prepareEvents(Array.isArray(data) ? data : []);
       } catch (error) {
-        allEvents = [];
-        mapStatus.textContent = 'events.json konnte nicht geladen werden.';
-        renderList([]);
+        const message = document.createElement('p');
+        message.className = 'empty-state';
+        message.textContent = 'Veranstaltungen konnten nicht geladen werden. Bitte direkt auf gi.de nachsehen.';
+        el.eventGroups.replaceChildren(message);
         return;
       }
 
+      months = [...new Set(events.map((event) => event.month))].sort();
+      buildChips();
+      readUrl();
       render();
+      scrollChipIntoView(monthButtons.get(state.month));
+      syncFilterBarHeight();
     }
 
-    function render() {
-      const events = allEvents.filter(isWithinRange);
-      renderMap(events.filter(isGermanPhysical));
-      renderList(events.filter(isRemoteOrInternational));
-      syncListHeight();
-    }
-
-    function isWithinRange(event) {
-      const start = parseIsoDate(event.dateStart);
-      if (!start) return false;
-      const limit = new Date();
-      limit.setHours(0, 0, 0, 0);
-      limit.setMonth(limit.getMonth() + rangeMonths);
-      return start < limit;
-    }
-
-    function setRange(months) {
-      rangeMonths = months;
-      for (const button of rangeButtons) {
-        const active = Number(button.dataset.months) === months;
-        button.classList.toggle('is-active', active);
-        button.setAttribute('aria-pressed', String(active));
-      }
-      if (allEvents.length) render();
-    }
-
-    for (const button of rangeButtons) {
-      button.addEventListener('click', () => setRange(Number(button.dataset.months)));
-    }
-
-    function renderList(events) {
-      clearNode(eventList);
-      const sorted = [...events].sort(compareEvents);
-
-      if (sorted.length === 0) {
-        const li = document.createElement('li');
-        li.className = 'empty-state';
-        li.textContent = 'Keine Online- oder internationalen Veranstaltungen gefunden.';
-        eventList.appendChild(li);
-        return;
-      }
-
-      for (const event of sorted) {
-        const item = document.createElement('li');
-        item.className = 'event-item';
-
-        const itemLink = document.createElement('a');
-        itemLink.className = 'event-item-link';
-        itemLink.href = event.url;
-        itemLink.target = '_blank';
-        itemLink.rel = 'noopener noreferrer';
-
-        const date = document.createElement('div');
-        date.className = 'event-date';
-        date.textContent = formatDateRange(event);
-
-        const category = event.category ? document.createElement('span') : null;
-        if (category) {
-          category.className = 'event-category';
-          category.textContent = escapeText(event.category);
-        }
-
-        const title = document.createElement('span');
-        title.className = 'event-title';
-        title.textContent = escapeText(event.title);
-
-        const location = event.city ? document.createElement('div') : null;
-        if (location) {
-          location.className = 'event-location';
-          location.textContent = escapeText(event.city);
-        }
-
-        itemLink.append(date);
-        if (category) itemLink.append(category);
-        itemLink.append(title);
-        if (location) itemLink.append(location);
-        item.append(itemLink);
-        eventList.appendChild(item);
-      }
-
-      syncListHeight();
-    }
-
-    function syncListHeight() {
-      const mapHeight = mapShell.offsetHeight;
-      const isPage = eventWidget.classList.contains(CONFIG.layouts.page);
-      const viewportRoom = isPage
-        ? window.innerHeight - eventListShell.getBoundingClientRect().top - CONFIG.listBottomReserve
-        : 0;
-      const listTargetHeight = Math.max(mapHeight, CONFIG.listMinimumHeight, viewportRoom);
-
-      // Multi-column mode: fix the list height so the columns fill in order; overflow beyond the
-      // second column is clipped by the shell.
-      const multiColumn = isPage && window.matchMedia('(min-width: 1200px)').matches;
-      eventList.style.height = multiColumn ? `${listTargetHeight}px` : '';
-      if (multiColumn) {
-        eventListShell.style.maxHeight = `${listTargetHeight}px`;
-        return;
-      }
-
-      const items = Array.from(eventList.children);
-      let visibleHeight = 0;
-
-      for (const item of items) {
-        const marginBottom = parseFloat(window.getComputedStyle(item).marginBottom) || 0;
-        const itemBottom = item.offsetTop + item.offsetHeight + marginBottom;
-        if (itemBottom > listTargetHeight) break;
-        visibleHeight = itemBottom;
-      }
-
-      eventListShell.style.maxHeight = `${visibleHeight || listTargetHeight}px`;
-    }
-
-    function renderMap(events) {
-      clearNode(markerLayer);
-      closeCard();
-      selectedMarker = null;
-
-      if (events.length === 0) {
-        mapStatus.textContent = 'Keine Vor-Ort-Veranstaltungen in Deutschland gefunden.';
-        return;
-      }
-
-      const points = events.map((event) => ({ ...project(event.lat, event.lng), events: [event] }));
-      const clusters = clusterPoints(points);
-      for (const cluster of clusters) drawMarker(cluster);
-      mapStatus.textContent = '';
-    }
-
-    function compareEvents(a, b) {
-      const ad = a.dateStart || '';
-      const bd = b.dateStart || '';
-      if (ad !== bd) return ad.localeCompare(bd);
-      return String(a.title || '').localeCompare(String(b.title || ''), 'de');
-    }
-
-    function clusterPoints(points) {
-      const rect = mapSvg.getBoundingClientRect();
-      const scale = rect.width ? rect.width / 1000 : 1;
-      const threshold = CONFIG.clusterThreshold / scale;
-      const clusters = [];
-
-      for (const point of points) {
-        let matched = null;
-        for (const cluster of clusters) {
-          const dx = point.x - cluster.x;
-          const dy = point.y - cluster.y;
-          if (Math.sqrt(dx * dx + dy * dy) <= threshold) {
-            matched = cluster;
-            break;
-          }
-        }
-        if (matched) {
-          matched.events.push(...point.events);
-          matched.x = matched.events.reduce((sum, event) => sum + project(event.lat, event.lng).x, 0) / matched.events.length;
-          matched.y = matched.events.reduce((sum, event) => sum + project(event.lat, event.lng).y, 0) / matched.events.length;
-        } else {
-          clusters.push({ x: point.x, y: point.y, events: [...point.events] });
-        }
-      }
-
-      return clusters;
-    }
-
-    function drawMarker(cluster) {
-      const group = document.createElementNS(SVG_NS, 'g');
-      group.setAttribute('class', 'marker-group');
-      group.setAttribute('tabindex', '0');
-      group.setAttribute('role', 'button');
-      group.setAttribute('aria-label', cluster.events.length === 1 ? cluster.events[0].title : `${cluster.events.length} Veranstaltungen`);
-
-      const ring = document.createElementNS(SVG_NS, 'circle');
-      ring.setAttribute('class', 'marker-ring');
-      ring.setAttribute('cx', cluster.x);
-      ring.setAttribute('cy', cluster.y);
-      ring.setAttribute('r', markerRingRadius(cluster));
-      ring.setAttribute('fill', 'none');
-      ring.setAttribute('stroke', YELLOW);
-      ring.setAttribute('stroke-width', CONFIG.marker.ringStrokeWidth);
-
-      const dot = document.createElementNS(SVG_NS, 'circle');
-      dot.setAttribute('class', cluster.events.length > 1 ? 'cluster-dot' : 'marker-dot');
-      dot.setAttribute('cx', cluster.x);
-      dot.setAttribute('cy', cluster.y);
-      dot.setAttribute('fill', NAVY);
-      dot.setAttribute('stroke', WHITE);
-      dot.setAttribute('stroke-width', CONFIG.marker.defaultStrokeWidth);
-      dot.setAttribute('r', markerRadius(cluster));
-      dot.dataset.r = markerRadius(cluster);
-
-      group.append(ring, dot);
-
-      group.addEventListener('mouseenter', () => selectMarker(group, cluster));
-      group.addEventListener('mouseleave', (event) => scheduleCloseCard(event.relatedTarget));
-      group.addEventListener('focus', () => selectMarker(group, cluster));
-      group.addEventListener('blur', (event) => scheduleCloseCard(event.relatedTarget));
-      group.addEventListener('click', (event) => {
-        event.stopPropagation();
-        selectMarker(group, cluster);
-      });
-      group.addEventListener('keydown', (event) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          selectMarker(group, cluster);
-        }
-      });
-
-      markerLayer.appendChild(group);
-    }
-
-    function markerRadius(cluster) {
-      if (cluster.events.length === 1) return CONFIG.marker.singleRadius;
-      return Math.min(
-        CONFIG.marker.clusterMaxRadius,
-        CONFIG.marker.clusterBaseRadius + cluster.events.length * CONFIG.marker.clusterGrowth
-      );
-    }
-
-    function markerRingRadius(cluster) {
-      return markerRadius(cluster) + CONFIG.marker.ringOffset;
-    }
-
-    function selectMarker(group, cluster) {
-      clearCloseCardTimer();
-      if (selectedMarker && selectedMarker !== group) resetMarker(selectedMarker);
-      selectedMarker = group;
-
-      const ring = group.querySelector('.marker-ring');
-      const dot = group.querySelector('.marker-dot, .cluster-dot');
-      if (ring) ring.setAttribute('opacity', 1);
-      if (dot) {
-        dot.setAttribute('fill', YELLOW);
-        dot.setAttribute('stroke', NAVY);
-        dot.setAttribute('stroke-width', CONFIG.marker.hoverStrokeWidth);
-        dot.setAttribute('r', Number(dot.dataset.r) + CONFIG.marker.hoverRadiusIncrease);
-      }
-
-      showCard(cluster);
-    }
-
-    function resetMarker(group) {
-      const ring = group.querySelector('.marker-ring');
-      const dot = group.querySelector('.marker-dot, .cluster-dot');
-      if (ring) ring.setAttribute('opacity', 0);
-      if (dot) {
-        dot.setAttribute('fill', NAVY);
-        dot.setAttribute('stroke', WHITE);
-        dot.setAttribute('stroke-width', CONFIG.marker.defaultStrokeWidth);
-        dot.setAttribute('r', dot.dataset.r);
-      }
-    }
-
-    function showCard(cluster) {
-      closeCard(false);
-
-      const card = document.createElement('div');
-      card.className = 'event-card';
-      card.setAttribute('role', 'dialog');
-      card.addEventListener('mouseenter', clearCloseCardTimer);
-      card.addEventListener('mouseleave', (event) => scheduleCloseCard(event.relatedTarget));
-      card.addEventListener('focusin', clearCloseCardTimer);
-      card.addEventListener('focusout', (event) => scheduleCloseCard(event.relatedTarget));
-
-      const sorted = [...cluster.events].sort(compareEvents);
-      for (const event of sorted) {
-        const block = document.createElement('a');
-        block.className = 'card-event';
-        block.href = event.url;
-        block.target = '_blank';
-        block.rel = 'noopener noreferrer';
-
-        const title = document.createElement('h3');
-        title.textContent = escapeText(event.title);
-
-        const date = document.createElement('p');
-        date.className = 'card-date';
-        date.textContent = formatDateRange(event);
-
-        const location = document.createElement('p');
-        location.className = 'card-location';
-        location.textContent = event.city || 'Vor Ort';
-
-        block.append(title, date, location);
-        card.appendChild(block);
-      }
-
-      document.body.appendChild(card);
-      openCard = card;
-      positionCard(card, cluster.x, cluster.y);
-    }
-
-    function positionCard(card, svgX, svgY) {
-      const svgRect = mapSvg.getBoundingClientRect();
-      const scaleX = svgRect.width / 1000;
-      const scaleY = svgRect.height / 1000;
-      const markerX = svgRect.left + svgX * scaleX;
-      const markerY = svgRect.top + svgY * scaleY;
-      const gap = CONFIG.popup.gap;
-      const sideClamp = CONFIG.popup.edgeClamp;
-
-      const cardWidth = card.offsetWidth;
-      const cardHeight = card.offsetHeight;
-      let left = markerX - cardWidth / 2;
-      let top = markerY - cardHeight - gap;
-
-      if (top < sideClamp) top = markerY + gap;
-      if (top + cardHeight > window.innerHeight - sideClamp) {
-        top = window.innerHeight - cardHeight - sideClamp;
-      }
-      left = Math.max(sideClamp, Math.min(left, window.innerWidth - cardWidth - sideClamp));
-
-      card.style.left = `${left}px`;
-      card.style.top = `${top}px`;
-    }
-
-    function scheduleCloseCard(relatedTarget) {
-      if (relatedTarget && openCard && openCard.contains(relatedTarget)) return;
-      clearCloseCardTimer();
-      closeCardTimer = window.setTimeout(() => closeCard(), CONFIG.popup.closeDelay);
-    }
-
-    function clearCloseCardTimer() {
-      if (!closeCardTimer) return;
-      window.clearTimeout(closeCardTimer);
-      closeCardTimer = null;
-    }
-
-    function closeCard(reset = true) {
-      clearCloseCardTimer();
-      if (openCard) {
-        openCard.remove();
-        openCard = null;
-      }
-      if (reset && selectedMarker) {
-        resetMarker(selectedMarker);
-        selectedMarker = null;
-      }
-    }
-
-    window.addEventListener('resize', () => {
-      if (!allEvents.length) return;
-      renderMap(allEvents.filter(isWithinRange).filter(isGermanPhysical));
-      syncListHeight();
-    });
-
-    applyLayoutMode();
-    setRange(initialMonths());
+    setupLayoutObservers();
+    watchMapVisibility();
     loadEvents();
   </script>
 </body>
