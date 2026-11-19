@@ -176,5 +176,9 @@
     "lat": 48.251388,
     "lng": 11.650966
   },
-  "Wien": null
+  "Wien": null,
+  "Braunschweig": {
+    "lat": 52.264658,
+    "lng": 10.523607
+  }
 }
