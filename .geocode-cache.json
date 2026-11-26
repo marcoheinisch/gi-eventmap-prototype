@@ -180,5 +180,11 @@
   "Braunschweig": {
     "lat": 52.264658,
     "lng": 10.523607
+  },
+  "Lissabon": null,
+  "Esch-sur-Alzette": null,
+  "Esch": {
+    "lat": 49.897565,
+    "lng": 6.850271
   }
 }
